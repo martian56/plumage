@@ -1,0 +1,39 @@
+import std/string
+import std/test { assert_eq_str }
+import "./list" { ListView }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_items_render_with_indent() {
+    let b = Buffer.new(8, 2)
+    ListView.new(["one", "two"]).render(Rect.new(0, 0, 8, 2), b)
+    assert_eq_str(b.row_text(0), "  one   ")
+    assert_eq_str(b.row_text(1), "  two   ")
+}
+
+fun test_selected_item_gets_the_marker() {
+    let b = Buffer.new(8, 2)
+    ListView.new(["one", "two"]).selected(1).render(Rect.new(0, 0, 8, 2), b)
+    assert_eq_str(b.row_text(0), "  one   ")
+    assert_eq_str(b.row_text(1), "> two   ")
+}
+
+fun test_scrolls_to_keep_selection_visible() {
+    let b = Buffer.new(6, 2)
+    let items = ["a", "b", "c", "d", "e"]
+    ListView.new(items).selected(3).render(Rect.new(0, 0, 6, 2), b)
+    assert_eq_str(b.row_text(0), "  c   ")
+    assert_eq_str(b.row_text(1), "> d   ")
+}
+
+fun test_long_items_are_clipped() {
+    let b = Buffer.new(6, 1)
+    ListView.new(["abcdefgh"]).render(Rect.new(0, 0, 6, 1), b)
+    assert_eq_str(b.row_text(0), "  abcd")
+}
+
+fun test_custom_marker() {
+    let b = Buffer.new(7, 1)
+    ListView.new(["x"]).selected(0).marker("* ").render(Rect.new(0, 0, 7, 1), b)
+    assert_eq_str(b.row_text(0), "* x    ")
+}

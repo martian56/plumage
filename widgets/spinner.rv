@@ -1,0 +1,43 @@
+// A little activity indicator. Feed it the tick counter from your model;
+// each tick advances the animation one frame.
+
+import std/string
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+
+struct Spinner {
+    tick: Int,
+    label: String,
+    style: Style,
+}
+
+impl Spinner {
+    fun new(tick: Int) -> Spinner {
+        return Spinner { tick, label: "", style: Style.new() }
+    }
+
+    fun label(self, text: String) -> Spinner {
+        return Spinner { tick: self.tick, label: text, style: self.style }
+    }
+
+    fun style(self, s: Style) -> Spinner {
+        return Spinner { tick: self.tick, label: self.label, style: s }
+    }
+}
+
+impl Widget for Spinner {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() {
+            return
+        }
+        let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        let frame = frames[self.tick % frames.len()]
+        let text = frame
+        if self.label != "" {
+            text = "${frame} ${self.label}"
+        }
+        buf.set_string(area.x, area.y, text, self.style)
+        return
+    }
+}

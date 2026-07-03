@@ -1,0 +1,52 @@
+import std/string
+import std/test { assert_eq_str, assert_eq_int }
+import "./block" { Block, BorderKind }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+import "../style" { Style }
+
+fun test_plain_border() {
+    let b = Buffer.new(5, 3)
+    Block.new().render(Rect.new(0, 0, 5, 3), b)
+    assert_eq_str(b.row_text(0), "┌───┐")
+    assert_eq_str(b.row_text(1), "│   │")
+    assert_eq_str(b.row_text(2), "└───┘")
+}
+
+fun test_rounded_corners() {
+    let b = Buffer.new(4, 2)
+    Block.new().rounded().render(Rect.new(0, 0, 4, 2), b)
+    assert_eq_str(b.row_text(0), "╭──╮")
+    assert_eq_str(b.row_text(1), "╰──╯")
+}
+
+fun test_double_border() {
+    let b = Buffer.new(4, 2)
+    Block.new().double().render(Rect.new(0, 0, 4, 2), b)
+    assert_eq_str(b.row_text(0), "╔══╗")
+    assert_eq_str(b.row_text(1), "╚══╝")
+}
+
+fun test_title_lands_on_the_top_edge() {
+    let b = Buffer.new(10, 3)
+    Block.new().title("Hi").render(Rect.new(0, 0, 10, 3), b)
+    assert_eq_str(b.row_text(0), "┌─Hi─────┐")
+}
+
+fun test_long_title_is_truncated() {
+    let b = Buffer.new(8, 3)
+    Block.new().title("very long title").render(Rect.new(0, 0, 8, 3), b)
+    assert_eq_str(b.row_text(0), "┌─very─┐")
+}
+
+fun test_inner_shrinks_with_borders() {
+    let inner = Block.new().inner(Rect.new(0, 0, 10, 6))
+    assert_eq_int(inner.x, 1)
+    assert_eq_int(inner.w, 8)
+}
+
+fun test_inner_without_borders_is_the_area() {
+    let inner = Block.new().no_borders().inner(Rect.new(0, 0, 10, 6))
+    assert_eq_int(inner.x, 0)
+    assert_eq_int(inner.w, 10)
+}

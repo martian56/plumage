@@ -1,0 +1,30 @@
+import std/string
+import std/test { assert_eq_str, assert_true }
+import "./gauge" { Gauge }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_half_full() {
+    let b = Buffer.new(10, 1)
+    // A single-space label overwrites one bar cell at the center.
+    Gauge.new(50).label(" ").render(Rect.new(0, 0, 10, 1), b)
+    assert_eq_str(b.row_text(0), "████ ░░░░░")
+}
+
+fun test_label_defaults_to_percent() {
+    let b = Buffer.new(12, 1)
+    Gauge.new(40).render(Rect.new(0, 0, 12, 1), b)
+    assert_true(b.row_text(0).contains("40%"))
+}
+
+fun test_pct_is_clamped() {
+    let b = Buffer.new(4, 1)
+    Gauge.new(250).label(" ").render(Rect.new(0, 0, 4, 1), b)
+    assert_eq_str(b.row_text(0), "█ ██")
+}
+
+fun test_empty_gauge_is_all_track() {
+    let b = Buffer.new(6, 1)
+    Gauge.new(0).label(" ").render(Rect.new(0, 0, 6, 1), b)
+    assert_eq_str(b.row_text(0), "░░ ░░░")
+}

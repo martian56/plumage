@@ -1,0 +1,183 @@
+// Colors and text attributes for buffer cells. A Style is plain data; the
+// SGR encoding happens once, in sgr_codes, so the renderer and the tests
+// agree on exactly what a style means.
+
+// Terminal colors: the classic named set, the 256-color palette by index,
+// and 24-bit RGB. Default is whatever the terminal was already using.
+enum Color {
+    Default,
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+    Gray,
+    Indexed(Int),
+    Rgb(Int, Int, Int),
+}
+
+struct Style {
+    fg: Color,
+    bg: Color,
+    bold: Bool,
+    dim: Bool,
+    italic: Bool,
+    underline: Bool,
+    reverse: Bool,
+}
+
+impl Style {
+    fun new() -> Style {
+        return Style {
+            fg: Color.Default,
+            bg: Color.Default,
+            bold: false,
+            dim: false,
+            italic: false,
+            underline: false,
+            reverse: false,
+        }
+    }
+
+    // Each builder returns a fresh Style, so a base can branch safely.
+    fun fg(self, c: Color) -> Style {
+        let s = self._copy()
+        s.fg = c
+        return s
+    }
+
+    fun bg(self, c: Color) -> Style {
+        let s = self._copy()
+        s.bg = c
+        return s
+    }
+
+    fun bold(self) -> Style {
+        let s = self._copy()
+        s.bold = true
+        return s
+    }
+
+    fun dim(self) -> Style {
+        let s = self._copy()
+        s.dim = true
+        return s
+    }
+
+    fun italic(self) -> Style {
+        let s = self._copy()
+        s.italic = true
+        return s
+    }
+
+    fun underline(self) -> Style {
+        let s = self._copy()
+        s.underline = true
+        return s
+    }
+
+    fun reverse(self) -> Style {
+        let s = self._copy()
+        s.reverse = true
+        return s
+    }
+
+    fun _copy(self) -> Style {
+        return Style {
+            fg: self.fg,
+            bg: self.bg,
+            bold: self.bold,
+            dim: self.dim,
+            italic: self.italic,
+            underline: self.underline,
+            reverse: self.reverse,
+        }
+    }
+}
+
+// The SGR parameter list for a style, always starting from a reset so a
+// cell's appearance never depends on what was drawn before it.
+fun sgr_codes(s: Style) -> List<Int> {
+    let out: List<Int> = []
+    out.push(0)
+    if s.bold {
+        out.push(1)
+    }
+    if s.dim {
+        out.push(2)
+    }
+    if s.italic {
+        out.push(3)
+    }
+    if s.underline {
+        out.push(4)
+    }
+    if s.reverse {
+        out.push(7)
+    }
+    _push_color(out, s.fg, 30, 38)
+    _push_color(out, s.bg, 40, 48)
+    return out
+}
+
+// A comparable fingerprint, used by the renderer to detect style changes.
+fun style_key(s: Style) -> String {
+    let codes = sgr_codes(s)
+    let key = ""
+    let i = 0
+    while i < codes.len() {
+        key = "${key};${codes[i]}"
+        i = i + 1
+    }
+    return key
+}
+
+// Append the codes for one color. base is 30 for foreground and 40 for
+// background; ext is the 38 or 48 extended-color introducer.
+fun _push_color(out: List<Int>, c: Color, base: Int, ext: Int) {
+    match c {
+        Default -> {},
+        Black -> {
+            out.push(base)
+        },
+        Red -> {
+            out.push(base + 1)
+        },
+        Green -> {
+            out.push(base + 2)
+        },
+        Yellow -> {
+            out.push(base + 3)
+        },
+        Blue -> {
+            out.push(base + 4)
+        },
+        Magenta -> {
+            out.push(base + 5)
+        },
+        Cyan -> {
+            out.push(base + 6)
+        },
+        White -> {
+            out.push(base + 7)
+        },
+        Gray -> {
+            out.push(base + 60)
+        },
+        Indexed(n) -> {
+            out.push(ext)
+            out.push(5)
+            out.push(n)
+        },
+        Rgb(r, g, b) -> {
+            out.push(ext)
+            out.push(2)
+            out.push(r)
+            out.push(g)
+            out.push(b)
+        },
+    }
+}

@@ -1,0 +1,160 @@
+// plumage: a terminal UI framework for Raven.
+//
+// You give it three functions and a model; it owns the terminal, the event
+// loop, and the drawing. update is the only place state changes, view is a
+// pure description of one frame, and rendering ships just the cells that
+// changed since the last frame.
+//
+//     import "github.com/martian56/plumage" { App, Event, Frame, Step, next, quit, run }
+//     import "github.com/martian56/plumage/widgets/paragraph" { Paragraph }
+//     import "github.com/martian56/perch/keys" { Key }
+//
+//     struct Model { count: Int }
+//
+//     fun init() -> Model {
+//         return Model { count: 0 }
+//     }
+//
+//     fun update(m: Model, e: Event) -> Step<Model> {
+//         match e {
+//             KeyPress(k) -> match k {
+//                 Char(c) -> {
+//                     if c == "q" {
+//                         return quit(m)
+//                     }
+//                     return next(Model { count: m.count + 1 })
+//                 },
+//                 _ -> {},
+//             },
+//             _ -> {},
+//         }
+//         return next(m)
+//     }
+//
+//     fun view(m: Model, f: Frame) {
+//         Paragraph.new("pressed ${m.count} keys, q quits").render(f.area(), f.buf)
+//     }
+//
+//     fun main() {
+//         run<Model>(App { init: init, update: update, view: view, tick_ms: 200 })
+//     }
+//
+// Widgets live under plumage/widgets; layout, style, text, and buffer are
+// importable on their own for custom widgets.
+
+import std/string
+import "github.com/martian56/perch" { Terminal, Size }
+import "github.com/martian56/perch/keys" { InputEvent, Key, MouseEvent }
+import "./buffer" { Buffer, Widget, diff, full_redraw }
+import "./layout" { Rect }
+
+// Everything update can react to. Tick fires when tick_ms passes without
+// input, which is what drives animation. Resize arrives with the new size
+// already applied to the frame.
+enum Event {
+    KeyPress(Key),
+    Mouse(MouseEvent),
+    Resize(Int, Int),
+    Tick,
+}
+
+// What update returns: the model to carry forward, and whether to stop.
+// Build it with next or quit.
+struct Step<M> {
+    model: M,
+    quit: Bool,
+}
+
+fun next<M>(m: M) -> Step<M> {
+    return Step { model: m, quit: false }
+}
+
+fun quit<M>(m: M) -> Step<M> {
+    return Step { model: m, quit: true }
+}
+
+// The surface a view draws one frame onto.
+struct Frame {
+    buf: Buffer,
+}
+
+impl Frame {
+    // The full frame as a rect; split it with layout to place widgets.
+    fun area(self) -> Rect {
+        return self.buf.area()
+    }
+}
+
+// A whole application: pure functions over a model, plus the tick rate.
+struct App<M> {
+    init: fun() -> M,
+    update: fun(M, Event) -> Step<M>,
+    view: fun(M, Frame) -> Unit,
+    tick_ms: Int,
+}
+
+// Take over the terminal and run the app until update quits or stdin
+// closes. Returns false without touching anything when stdin is not a
+// terminal (for example a piped run).
+fun run<M>(app: App<M>) -> Bool {
+    let term = Terminal.new()
+    if !term.setup() {
+        return false
+    }
+    term.mouse_on()
+    let size = term.size()
+    let model = (app.init)()
+    let frame = Frame { buf: Buffer.new(size.w, size.h) }
+    (app.view)(model, frame)
+    term.write(full_redraw(frame.buf))
+    term.flush()
+    let prev = frame.buf
+    let running = true
+    while running {
+        let got = term.read_event(app.tick_ms)
+        let ev = Event.Tick
+        let closed = false
+        match got {
+            KeyPress(k) -> {
+                ev = Event.KeyPress(k)
+            },
+            Mouse(m) -> {
+                ev = Event.Mouse(m)
+            },
+            Idle -> {
+                ev = Event.Tick
+            },
+            Closed -> {
+                closed = true
+            },
+        }
+        let force_full = false
+        let ns = term.size()
+        if ns.w != size.w || ns.h != size.h {
+            size = ns
+            ev = Event.Resize(size.w, size.h)
+            force_full = true
+        }
+        if closed {
+            running = false
+        } else {
+            let step = (app.update)(model, ev)
+            model = step.model
+            if step.quit {
+                running = false
+            } else {
+                let nf = Frame { buf: Buffer.new(size.w, size.h) }
+                (app.view)(model, nf)
+                if force_full {
+                    term.write(full_redraw(nf.buf))
+                } else {
+                    term.write(diff(prev, nf.buf))
+                }
+                term.flush()
+                prev = nf.buf
+            }
+        }
+    }
+    term.restore()
+    return true
+}

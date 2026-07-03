@@ -1,0 +1,56 @@
+import std/string
+import std/test { assert_eq_int, assert_eq_str, assert_true, assert_false }
+import "./style" { Style, Color, sgr_codes, style_key }
+
+fun codes_text(codes: List<Int>) -> String {
+    let out = ""
+    let i = 0
+    while i < codes.len() {
+        out = "${out};${codes[i]}"
+        i = i + 1
+    }
+    return out
+}
+
+fun test_default_style_is_just_reset() {
+    assert_eq_str(codes_text(sgr_codes(Style.new())), ";0")
+}
+
+fun test_named_colors() {
+    let s = Style.new().fg(Color.Red).bg(Color.Blue)
+    assert_eq_str(codes_text(sgr_codes(s)), ";0;31;44")
+}
+
+fun test_gray_uses_bright_range() {
+    assert_eq_str(codes_text(sgr_codes(Style.new().fg(Color.Gray))), ";0;90")
+}
+
+fun test_attributes() {
+    let s = Style.new().bold().underline().reverse()
+    assert_eq_str(codes_text(sgr_codes(s)), ";0;1;4;7")
+}
+
+fun test_indexed_color() {
+    let s = Style.new().fg(Color.Indexed(208))
+    assert_eq_str(codes_text(sgr_codes(s)), ";0;38;5;208")
+}
+
+fun test_rgb_color() {
+    let s = Style.new().bg(Color.Rgb(10, 20, 30))
+    assert_eq_str(codes_text(sgr_codes(s)), ";0;48;2;10;20;30")
+}
+
+fun test_builders_do_not_mutate_the_base() {
+    let base = Style.new().bold()
+    let red = base.fg(Color.Red)
+    let plain = codes_text(sgr_codes(base))
+    assert_eq_str(plain, ";0;1")
+    assert_eq_str(codes_text(sgr_codes(red)), ";0;1;31")
+}
+
+fun test_style_key_matches_equality() {
+    let a = Style.new().fg(Color.Red).bold()
+    let b = Style.new().bold().fg(Color.Red)
+    assert_true(style_key(a) == style_key(b))
+    assert_false(style_key(a) == style_key(Style.new()))
+}

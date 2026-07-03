@@ -1,0 +1,164 @@
+// A single-line text editor. Unlike the display widgets this one is
+// stateful: keep a TextInput in your model, pass key events to handle_key,
+// and render it each frame. The view scrolls so the cursor stays visible.
+
+import std/string
+import "github.com/martian56/wingspan" { decode, width, truncate }
+import "github.com/martian56/perch/keys" { Key }
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+
+struct TextInput {
+    value: String,
+    cursor: Int,
+    style: Style,
+    focused: Bool,
+}
+
+impl TextInput {
+    fun new() -> TextInput {
+        return TextInput { value: "", cursor: 0, style: Style.new(), focused: true }
+    }
+
+    fun with_value(v: String) -> TextInput {
+        return TextInput { value: v, cursor: v.length(), style: Style.new(), focused: true }
+    }
+
+    fun focus(self, on: Bool) {
+        self.focused = on
+    }
+
+    // Apply one key. Returns true when the key edited or moved anything,
+    // false when it is not an editing key and the caller should handle it.
+    fun handle_key(self, k: Key) -> Bool {
+        return match k {
+            Char(c) -> {
+                self.insert(c)
+                true
+            },
+            Backspace -> {
+                self.backspace()
+                true
+            },
+            Delete -> {
+                self.delete()
+                true
+            },
+            Left -> {
+                self.left()
+                true
+            },
+            Right -> {
+                self.right()
+                true
+            },
+            Home -> {
+                self.cursor = 0
+                true
+            },
+            End -> {
+                self.cursor = self.value.length()
+                true
+            },
+            _ -> false,
+        }
+    }
+
+    fun insert(self, s: String) {
+        let before = self.value.substring(0, self.cursor)
+        let after = self.value.substring(self.cursor, self.value.length())
+        self.value = "${before}${s}${after}"
+        self.cursor = self.cursor + s.length()
+    }
+
+    fun backspace(self) {
+        if self.cursor <= 0 {
+            return
+        }
+        let prev = self._prev_offset()
+        let after = self.value.substring(self.cursor, self.value.length())
+        self.value = "${self.value.substring(0, prev)}${after}"
+        self.cursor = prev
+    }
+
+    fun delete(self) {
+        if self.cursor >= self.value.length() {
+            return
+        }
+        let c = decode(self.value, self.cursor)
+        let before = self.value.substring(0, self.cursor)
+        let after = self.value.substring(self.cursor + c.size, self.value.length())
+        self.value = "${before}${after}"
+    }
+
+    fun left(self) {
+        if self.cursor > 0 {
+            self.cursor = self._prev_offset()
+        }
+    }
+
+    fun right(self) {
+        if self.cursor < self.value.length() {
+            self.cursor = self.cursor + decode(self.value, self.cursor).size
+        }
+    }
+
+    // Byte offset of the character before the cursor.
+    fun _prev_offset(self) -> Int {
+        let i = 0
+        let prev = 0
+        while i < self.cursor {
+            prev = i
+            i = i + decode(self.value, i).size
+        }
+        return prev
+    }
+
+    // Columns before the cursor, for placing the cursor cell.
+    fun _cursor_col(self) -> Int {
+        return width(self.value.substring(0, self.cursor))
+    }
+}
+
+impl Widget for TextInput {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() {
+            return
+        }
+        let cur = self._cursor_col()
+        // Scroll left so the cursor column fits inside the area.
+        let skip = 0
+        if cur >= area.w {
+            skip = cur - area.w + 1
+        }
+        let visible = _drop_cols(self.value, skip)
+        buf.set_string(area.x, area.y, truncate(visible, area.w), self.style)
+        if self.focused {
+            let cx = area.x + cur - skip
+            let at = self.cursor
+            let under = " "
+            if at < self.value.length() {
+                let c = decode(self.value, at)
+                under = self.value.substring(at, at + c.size)
+            }
+            buf.set(cx, area.y, under, self.style.reverse())
+        }
+        return
+    }
+}
+
+// Drop the first n display columns of s.
+fun _drop_cols(s: String, n: Int) -> String {
+    if n <= 0 {
+        return s
+    }
+    let dropped = 0
+    let i = 0
+    while i < s.length() && dropped < n {
+        let c = decode(s, i)
+        dropped = dropped + c.width
+        i = i + c.size
+    }
+    return s.substring(i, s.length())
+}

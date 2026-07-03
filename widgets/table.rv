@@ -1,0 +1,197 @@
+// Rows and columns with a styled header and a selectable row. Column
+// widths come from the content and shrink to fit the area.
+
+import std/string
+import "github.com/martian56/wingspan" { truncate, width, pad_right }
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+
+const GAP: Int = 2
+
+struct Table {
+    headers: List<String>,
+    rows: List<List<String>>,
+    selected: Int,
+    style: Style,
+    header_style: Style,
+    highlight_style: Style,
+}
+
+impl Table {
+    fun new(headers: List<String>) -> Table {
+        let rows: List<List<String>> = []
+        return Table {
+            headers,
+            rows,
+            selected: -1,
+            style: Style.new(),
+            header_style: Style.new().bold(),
+            highlight_style: Style.new().reverse(),
+        }
+    }
+
+    // Append one row; returns self so rows chain.
+    fun row(self, cells: List<String>) -> Table {
+        self.rows.push(cells)
+        return self
+    }
+
+    fun selected(self, i: Int) -> Table {
+        return Table {
+            headers: self.headers,
+            rows: self.rows,
+            selected: i,
+            style: self.style,
+            header_style: self.header_style,
+            highlight_style: self.highlight_style,
+        }
+    }
+
+    fun style(self, s: Style) -> Table {
+        return Table {
+            headers: self.headers,
+            rows: self.rows,
+            selected: self.selected,
+            style: s,
+            header_style: self.header_style,
+            highlight_style: self.highlight_style,
+        }
+    }
+
+    fun header_style(self, s: Style) -> Table {
+        return Table {
+            headers: self.headers,
+            rows: self.rows,
+            selected: self.selected,
+            style: self.style,
+            header_style: s,
+            highlight_style: self.highlight_style,
+        }
+    }
+
+    fun highlight_style(self, s: Style) -> Table {
+        return Table {
+            headers: self.headers,
+            rows: self.rows,
+            selected: self.selected,
+            style: self.style,
+            header_style: self.header_style,
+            highlight_style: s,
+        }
+    }
+
+    // Natural column widths, then shaved down (widest first) until the row
+    // fits the available space.
+    fun _widths(self, avail: Int) -> List<Int> {
+        let cols = self.headers.len()
+        let ws: List<Int> = []
+        let c = 0
+        while c < cols {
+            let best = width(self.headers[c])
+            let r = 0
+            while r < self.rows.len() {
+                let cells = self.rows[r]
+                if c < cells.len() {
+                    let cw = width(cells[c])
+                    if cw > best {
+                        best = cw
+                    }
+                }
+                r = r + 1
+            }
+            ws.push(best)
+            c = c + 1
+        }
+        let budget = avail - GAP * (cols - 1)
+        if budget < cols {
+            budget = cols
+        }
+        let total = 0
+        c = 0
+        while c < cols {
+            total = total + ws[c]
+            c = c + 1
+        }
+        while total > budget {
+            let widest = 0
+            c = 1
+            while c < cols {
+                if ws[c] > ws[widest] {
+                    widest = c
+                }
+                c = c + 1
+            }
+            if ws[widest] <= 1 {
+                total = budget
+            } else {
+                ws[widest] = ws[widest] - 1
+                total = total - 1
+            }
+        }
+        return ws
+    }
+
+    fun _offset(self, h: Int) -> Int {
+        let visible = h - 1
+        if self.selected < 0 || visible <= 0 {
+            return 0
+        }
+        if self.selected < visible {
+            return 0
+        }
+        return self.selected - visible + 1
+    }
+
+    fun _draw_row(
+        self,
+        cells: List<String>,
+        ws: List<Int>,
+        x0: Int,
+        y: Int,
+        sty: Style,
+        area: Rect,
+        buf: Buffer,
+    ) {
+        let x = x0
+        let c = 0
+        while c < ws.len() {
+            let text = ""
+            if c < cells.len() {
+                text = cells[c]
+            }
+            let piece = pad_right(truncate(text, ws[c]), ws[c])
+            if c < ws.len() - 1 {
+                piece = "${piece}${" ".repeat(GAP)}"
+            }
+            let rem = area.x + area.w - x
+            if rem > 0 {
+                x = buf.set_string(x, y, truncate(piece, rem), sty)
+            }
+            c = c + 1
+        }
+        return
+    }
+}
+
+impl Widget for Table {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() || self.headers.len() == 0 {
+            return
+        }
+        let ws = self._widths(area.w)
+        self._draw_row(self.headers, ws, area.x, area.y, self.header_style, area, buf)
+        let offset = self._offset(area.h)
+        let row = 0
+        while row + 1 < area.h && offset + row < self.rows.len() {
+            let i = offset + row
+            let sty = self.style
+            if i == self.selected {
+                sty = self.highlight_style
+            }
+            self._draw_row(self.rows[i], ws, area.x, area.y + 1 + row, sty, area, buf)
+            row = row + 1
+        }
+        return
+    }
+}

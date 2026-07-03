@@ -1,0 +1,58 @@
+import std/string
+import std/test { assert_eq_str, assert_eq_int }
+import "./paragraph" { Paragraph }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+import "../style" { Style, Color }
+import "../text" { Align, Line, Span }
+
+fun test_plain_lines() {
+    let b = Buffer.new(6, 2)
+    Paragraph.new("ab\ncd").render(Rect.new(0, 0, 6, 2), b)
+    assert_eq_str(b.row_text(0), "ab    ")
+    assert_eq_str(b.row_text(1), "cd    ")
+}
+
+fun test_center_alignment() {
+    let b = Buffer.new(6, 1)
+    Paragraph.new("ab").align(Align.Center).render(Rect.new(0, 0, 6, 1), b)
+    assert_eq_str(b.row_text(0), "  ab  ")
+}
+
+fun test_right_alignment() {
+    let b = Buffer.new(6, 1)
+    Paragraph.new("ab").align(Align.Right).render(Rect.new(0, 0, 6, 1), b)
+    assert_eq_str(b.row_text(0), "    ab")
+}
+
+fun test_wrapping_fills_rows() {
+    let b = Buffer.new(5, 3)
+    Paragraph.new("aa bb cc").wrapped().render(Rect.new(0, 0, 5, 3), b)
+    assert_eq_str(b.row_text(0), "aa bb")
+    assert_eq_str(b.row_text(1), "cc   ")
+}
+
+fun test_scroll_skips_rows() {
+    let b = Buffer.new(4, 1)
+    Paragraph.new("one\ntwo\nthree").scroll(1).render(Rect.new(0, 0, 4, 1), b)
+    assert_eq_str(b.row_text(0), "two ")
+}
+
+fun test_row_count_with_wrapping() {
+    let p = Paragraph.new("aa bb cc").wrapped()
+    assert_eq_int(p.row_count(5), 2)
+    assert_eq_int(p.row_count(2), 3)
+}
+
+fun test_spans_keep_their_own_style() {
+    let b = Buffer.new(4, 1)
+    let line = Line.from_spans([Span.raw("a"), Span.styled("b", Style.new().fg(Color.Red))])
+    Paragraph.from_lines([line]).render(Rect.new(0, 0, 4, 1), b)
+    assert_eq_str(b.row_text(0), "ab  ")
+}
+
+fun test_long_line_clips_to_area() {
+    let b = Buffer.new(4, 1)
+    Paragraph.new("abcdefgh").render(Rect.new(0, 0, 4, 1), b)
+    assert_eq_str(b.row_text(0), "abcd")
+}

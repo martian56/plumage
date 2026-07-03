@@ -1,0 +1,33 @@
+import std/string
+import std/test { assert_eq_str }
+import "./scrollbar" { Scrollbar }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun col_text(b: Buffer, x: Int, h: Int) -> String {
+    let out = ""
+    let y = 0
+    while y < h {
+        out = out.concat(b.get(x, y).ch)
+        y = y + 1
+    }
+    return out
+}
+
+fun test_thumb_at_top() {
+    let b = Buffer.new(1, 4)
+    Scrollbar.new(8, 2, 0).render(Rect.new(0, 0, 1, 4), b)
+    assert_eq_str(col_text(b, 0, 4), "█│││")
+}
+
+fun test_thumb_at_bottom() {
+    let b = Buffer.new(1, 4)
+    Scrollbar.new(8, 2, 6).render(Rect.new(0, 0, 1, 4), b)
+    assert_eq_str(col_text(b, 0, 4), "│││█")
+}
+
+fun test_everything_visible_means_no_thumb() {
+    let b = Buffer.new(1, 3)
+    Scrollbar.new(3, 3, 0).render(Rect.new(0, 0, 1, 3), b)
+    assert_eq_str(col_text(b, 0, 3), "│││")
+}

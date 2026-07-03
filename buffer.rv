@@ -1,0 +1,186 @@
+// The cell grid everything draws into, and the diff that turns two grids
+// into the smallest ANSI update. Widgets never touch the terminal: they
+// write cells here, and the runtime ships the difference each frame.
+
+import std/string
+import "github.com/martian56/wingspan" { decode, char_width }
+import "github.com/martian56/perch/ansi" as ansi
+import "./style" { Style, Color, sgr_codes, style_key }
+import "./layout" { Rect }
+
+// Anything that can draw itself into a region of a buffer.
+trait Widget {
+    fun render(self, area: Rect, buf: Buffer)
+}
+
+// One screen cell: a character and its style. A wide character occupies two
+// cells; the second holds an empty ch and is skipped when rendering.
+struct Cell {
+    ch: String,
+    style: Style,
+}
+
+struct Buffer {
+    w: Int,
+    h: Int,
+    cells: List<Cell>,
+}
+
+impl Buffer {
+    fun new(w: Int, h: Int) -> Buffer {
+        let cells: List<Cell> = []
+        let n = w * h
+        let i = 0
+        while i < n {
+            cells.push(Cell { ch: " ", style: Style.new() })
+            i = i + 1
+        }
+        return Buffer { w, h, cells }
+    }
+
+    // The whole buffer as a rect, the root area for layout.
+    fun area(self) -> Rect {
+        return Rect { x: 0, y: 0, w: self.w, h: self.h }
+    }
+
+    fun get(self, x: Int, y: Int) -> Cell {
+        return self.cells[y * self.w + x]
+    }
+
+    // Write one character cell. Out-of-bounds writes are dropped, so
+    // widgets can draw without their own clipping.
+    fun set(self, x: Int, y: Int, ch: String, style: Style) {
+        if x < 0 || y < 0 || x >= self.w || y >= self.h {
+            return
+        }
+        self.cells[y * self.w + x] = Cell { ch, style }
+    }
+
+    // Write a string starting at x, y, clipped to the row. Wide characters
+    // take two cells; one that would stick out past the edge becomes a
+    // space. Zero-width characters are dropped. Returns the x after the
+    // last cell written.
+    fun set_string(self, x: Int, y: Int, s: String, style: Style) -> Int {
+        if y < 0 || y >= self.h {
+            return x
+        }
+        let cx = x
+        let i = 0
+        let n = s.length()
+        while i < n && cx < self.w {
+            let c = decode(s, i)
+            if c.size == 0 {
+                return cx
+            }
+            if c.width == 0 {
+                i = i + c.size
+            } else {
+                if c.width == 2 && cx + 1 >= self.w {
+                    self.set(cx, y, " ", style)
+                    return cx + 1
+                }
+                if cx >= 0 {
+                    self.set(cx, y, s.substring(i, i + c.size), style)
+                    if c.width == 2 {
+                        self.set(cx + 1, y, "", style)
+                    }
+                }
+                cx = cx + c.width
+                i = i + c.size
+            }
+        }
+        return cx
+    }
+
+    // Fill a whole rect with one character.
+    fun fill(self, area: Rect, ch: String, style: Style) {
+        let y = area.y
+        while y < area.y + area.h {
+            let x = area.x
+            while x < area.x + area.w {
+                self.set(x, y, ch, style)
+                x = x + 1
+            }
+            y = y + 1
+        }
+    }
+
+    // Row y as plain text, for tests and debugging.
+    fun row_text(self, y: Int) -> String {
+        let out = ""
+        let x = 0
+        while x < self.w {
+            out = out.concat(self.get(x, y).ch)
+            x = x + 1
+        }
+        return out
+    }
+}
+
+// The ANSI update that turns the old frame into the new one: only changed
+// cells are repainted, styles are re-emitted only when they change, and
+// cursor moves are skipped while writes stay contiguous.
+fun diff(old: Buffer, new: Buffer) -> String {
+    if old.w != new.w || old.h != new.h {
+        return full_redraw(new)
+    }
+    let out = ""
+    let last_key = "(none)"
+    let cur_x = -1
+    let cur_y = -1
+    let y = 0
+    while y < new.h {
+        let x = 0
+        while x < new.w {
+            let nc = new.get(x, y)
+            if nc.ch != "" && !_same_cell(old.get(x, y), nc) {
+                if cur_x != x || cur_y != y {
+                    out = out.concat(ansi.move_to(y + 1, x + 1))
+                }
+                let key = style_key(nc.style)
+                if key != last_key {
+                    out = out.concat(ansi.sgr(sgr_codes(nc.style)))
+                    last_key = key
+                }
+                out = out.concat(nc.ch)
+                cur_x = x + char_width(decode(nc.ch, 0).cp)
+                cur_y = y
+            }
+            x = x + 1
+        }
+        y = y + 1
+    }
+    return out
+}
+
+// Repaint everything, used on the first frame and after a resize.
+fun full_redraw(new: Buffer) -> String {
+    let out = ansi.clear_screen()
+    let last_key = "(none)"
+    let y = 0
+    while y < new.h {
+        out = out.concat(ansi.move_to(y + 1, 1))
+        let x = 0
+        while x < new.w {
+            let nc = new.get(x, y)
+            if nc.ch != "" {
+                let key = style_key(nc.style)
+                if key != last_key {
+                    out = out.concat(ansi.sgr(sgr_codes(nc.style)))
+                    last_key = key
+                }
+                out = out.concat(nc.ch)
+            }
+            x = x + 1
+        }
+        y = y + 1
+    }
+    return out
+}
+
+fun _same_cell(a: Cell, b: Cell) -> Bool {
+    if a.ch != b.ch {
+        return false
+    }
+    return style_key(a.style) == style_key(b.style)
+}

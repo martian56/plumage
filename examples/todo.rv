@@ -1,0 +1,208 @@
+// A todo list. Type into the input and press Enter to add an item. Arrows
+// or j and k move, space toggles done, d deletes, Tab switches focus
+// between the input and the list, q quits while the list has focus.
+
+import std/string
+import "github.com/martian56/perch/keys" { Key, MouseEvent, MouseKind }
+import "../lib" { App, Event, Frame, Step, next, quit, run }
+import "../layout" { Rect, Constraint, split_v }
+import "../style" { Style, Color }
+import "../widgets/block" { Block }
+import "../widgets/input" { TextInput }
+import "../widgets/list" { ListView }
+import "../widgets/paragraph" { Paragraph }
+
+struct Todo {
+    items: List<String>,
+    done: List<Bool>,
+    selected: Int,
+    entry: TextInput,
+    typing: Bool,
+}
+
+fun todo_init() -> Todo {
+    let items = ["read the plumage README", "build something"]
+    let done = [true, false]
+    return Todo {
+        items,
+        done,
+        selected: 0,
+        entry: TextInput.new(),
+        typing: true,
+    }
+}
+
+fun todo_update(m: Todo, e: Event) -> Step<Todo> {
+    match e {
+        KeyPress(k) -> {
+            if m.typing {
+                return _typing_key(m, k)
+            }
+            return _list_key(m, k)
+        },
+        _ -> {},
+    }
+    return next(m)
+}
+
+fun _typing_key(m: Todo, k: Key) -> Step<Todo> {
+    match k {
+        Enter -> {
+            let text = m.entry.value.trim()
+            if text != "" {
+                m.items.push(text)
+                m.done.push(false)
+                m.entry = TextInput.new()
+            }
+            return next(m)
+        },
+        Tab -> {
+            m.typing = false
+            m.entry.focus(false)
+            return next(m)
+        },
+        Esc -> {
+            m.typing = false
+            m.entry.focus(false)
+            return next(m)
+        },
+        Ctrl(c) -> {
+            if c == "c" {
+                return quit(m)
+            }
+        },
+        _ -> {},
+    }
+    m.entry.handle_key(k)
+    return next(m)
+}
+
+fun _list_key(m: Todo, k: Key) -> Step<Todo> {
+    match k {
+        Char(c) -> {
+            if c == "q" {
+                return quit(m)
+            }
+            if c == "j" {
+                return next(_move(m, 1))
+            }
+            if c == "k" {
+                return next(_move(m, -1))
+            }
+            if c == " " {
+                return next(_toggle(m))
+            }
+            if c == "d" {
+                return next(_remove(m))
+            }
+        },
+        Down -> {
+            return next(_move(m, 1))
+        },
+        Up -> {
+            return next(_move(m, -1))
+        },
+        Enter -> {
+            return next(_toggle(m))
+        },
+        Delete -> {
+            return next(_remove(m))
+        },
+        Tab -> {
+            m.typing = true
+            m.entry.focus(true)
+            return next(m)
+        },
+        Ctrl(c) -> {
+            if c == "c" {
+                return quit(m)
+            }
+        },
+        _ -> {},
+    }
+    return next(m)
+}
+
+fun _move(m: Todo, d: Int) -> Todo {
+    let s = m.selected + d
+    if s < 0 {
+        s = 0
+    }
+    if s >= m.items.len() {
+        s = m.items.len() - 1
+    }
+    m.selected = s
+    return m
+}
+
+fun _toggle(m: Todo) -> Todo {
+    if m.selected >= 0 && m.selected < m.done.len() {
+        m.done[m.selected] = !m.done[m.selected]
+    }
+    return m
+}
+
+fun _remove(m: Todo) -> Todo {
+    if m.selected < 0 || m.selected >= m.items.len() {
+        return m
+    }
+    let items: List<String> = []
+    let done: List<Bool> = []
+    let i = 0
+    while i < m.items.len() {
+        if i != m.selected {
+            items.push(m.items[i])
+            done.push(m.done[i])
+        }
+        i = i + 1
+    }
+    m.items = items
+    m.done = done
+    if m.selected >= items.len() {
+        m.selected = items.len() - 1
+    }
+    return m
+}
+
+fun todo_view(m: Todo, f: Frame) {
+    let rows = split_v(f.area(), [Constraint.Len(3), Constraint.Fill(1), Constraint.Len(1)])
+    let entry_title = "New item (Enter adds, Tab to list)"
+    if !m.typing {
+        entry_title = "New item (Tab to focus)"
+    }
+    let entry_box = Block.new().title(entry_title).rounded()
+    entry_box.render(rows[0], f.buf)
+    m.entry.render(entry_box.inner(rows[0]), f.buf)
+
+    let list_box = Block.new().title("Items").rounded()
+    list_box.render(rows[1], f.buf)
+    let lines: List<String> = []
+    let i = 0
+    while i < m.items.len() {
+        let mark = "[ ] "
+        if m.done[i] {
+            mark = "[x] "
+        }
+        lines.push("${mark}${m.items[i]}")
+        i = i + 1
+    }
+    let sel = -1
+    if !m.typing {
+        sel = m.selected
+    }
+    ListView.new(lines).selected(sel).highlight_style(Style.new().fg(Color.Cyan).reverse()).render(
+        list_box.inner(rows[1]),
+        f.buf,
+    )
+
+    Paragraph.new("space toggles, d deletes, q quits").style(Style.new().fg(Color.Gray)).render(
+        rows[2],
+        f.buf,
+    )
+}
+
+// Entry point used by src/main.rv.
+fun todo_main() -> Bool {
+    let app = App { init: todo_init, update: todo_update, view: todo_view, tick_ms: 250 }
+    return run<Todo>(app)
+}

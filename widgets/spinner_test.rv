@@ -1,0 +1,26 @@
+import std/string
+import std/test { assert_eq_str }
+import "./spinner" { Spinner }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_frame_advances_with_ticks() {
+    let a = Buffer.new(1, 1)
+    Spinner.new(0).render(Rect.new(0, 0, 1, 1), a)
+    let b = Buffer.new(1, 1)
+    Spinner.new(1).render(Rect.new(0, 0, 1, 1), b)
+    assert_eq_str(a.get(0, 0).ch, "⠋")
+    assert_eq_str(b.get(0, 0).ch, "⠙")
+}
+
+fun test_frames_repeat() {
+    let a = Buffer.new(1, 1)
+    Spinner.new(10).render(Rect.new(0, 0, 1, 1), a)
+    assert_eq_str(a.get(0, 0).ch, "⠋")
+}
+
+fun test_label() {
+    let b = Buffer.new(8, 1)
+    Spinner.new(0).label("busy").render(Rect.new(0, 0, 8, 1), b)
+    assert_eq_str(b.row_text(0), "⠋ busy  ")
+}

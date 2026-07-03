@@ -1,0 +1,157 @@
+// A bordered box with an optional title. Other widgets draw inside its
+// inner rect; compose them by rendering the block first.
+
+import std/string
+import "github.com/martian56/wingspan" { truncate, width }
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+
+enum BorderKind {
+    None,
+    Plain,
+    Rounded,
+    Double,
+    Thick,
+}
+
+struct Block {
+    title: String,
+    kind: BorderKind,
+    style: Style,
+    title_style: Style,
+}
+
+struct _Chars {
+    tl: String,
+    tr: String,
+    bl: String,
+    br: String,
+    h: String,
+    v: String,
+}
+
+impl Block {
+    fun new() -> Block {
+        return Block {
+            title: "",
+            kind: BorderKind.Plain,
+            style: Style.new(),
+            title_style: Style.new(),
+        }
+    }
+
+    fun title(self, t: String) -> Block {
+        return Block { title: t, kind: self.kind, style: self.style, title_style: self.title_style }
+    }
+
+    fun rounded(self) -> Block {
+        return Block {
+            title: self.title,
+            kind: BorderKind.Rounded,
+            style: self.style,
+            title_style: self.title_style,
+        }
+    }
+
+    fun double(self) -> Block {
+        return Block {
+            title: self.title,
+            kind: BorderKind.Double,
+            style: self.style,
+            title_style: self.title_style,
+        }
+    }
+
+    fun thick(self) -> Block {
+        return Block {
+            title: self.title,
+            kind: BorderKind.Thick,
+            style: self.style,
+            title_style: self.title_style,
+        }
+    }
+
+    fun no_borders(self) -> Block {
+        return Block {
+            title: self.title,
+            kind: BorderKind.None,
+            style: self.style,
+            title_style: self.title_style,
+        }
+    }
+
+    fun style(self, s: Style) -> Block {
+        return Block { title: self.title, kind: self.kind, style: s, title_style: self.title_style }
+    }
+
+    fun title_style(self, s: Style) -> Block {
+        return Block { title: self.title, kind: self.kind, style: self.style, title_style: s }
+    }
+
+    // Where content goes: the area minus the border, if there is one.
+    fun inner(self, area: Rect) -> Rect {
+        return match self.kind {
+            None -> area,
+            _ -> area.inner(1),
+        }
+    }
+}
+
+impl Widget for Block {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() {
+            return
+        }
+        match self.kind {
+            None -> {
+                self._draw_title(area, buf)
+                return
+            },
+            _ -> {},
+        }
+        if area.w < 2 || area.h < 2 {
+            return
+        }
+        let c = _chars(self.kind)
+        let right = area.x + area.w - 1
+        let bottom = area.y + area.h - 1
+        buf.set(area.x, area.y, c.tl, self.style)
+        buf.set(right, area.y, c.tr, self.style)
+        buf.set(area.x, bottom, c.bl, self.style)
+        buf.set(right, bottom, c.br, self.style)
+        let x = area.x + 1
+        while x < right {
+            buf.set(x, area.y, c.h, self.style)
+            buf.set(x, bottom, c.h, self.style)
+            x = x + 1
+        }
+        let y = area.y + 1
+        while y < bottom {
+            buf.set(area.x, y, c.v, self.style)
+            buf.set(right, y, c.v, self.style)
+            y = y + 1
+        }
+        self._draw_title(area, buf)
+    }
+}
+
+fun _chars(kind: BorderKind) -> _Chars {
+    return match kind {
+        Rounded -> _Chars { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
+        Double -> _Chars { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
+        Thick -> _Chars { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃" },
+        _ -> _Chars { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" },
+    }
+}
+
+impl Block {
+    fun _draw_title(self, area: Rect, buf: Buffer) {
+        if self.title == "" || area.w < 5 {
+            return
+        }
+        let t = truncate(self.title, area.w - 4)
+        buf.set_string(area.x + 2, area.y, t, self.title_style)
+        return
+    }
+}

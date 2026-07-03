@@ -1,0 +1,52 @@
+import std/string
+import std/test { assert_eq_str }
+import "./table" { Table }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_header_and_rows() {
+    let b = Buffer.new(12, 3)
+    let t = Table.new(["Name", "Age"])
+    t.row(["Ana", "31"])
+    t.row(["Bo", "9"])
+    t.render(Rect.new(0, 0, 12, 3), b)
+    assert_eq_str(b.row_text(0), "Name  Age   ")
+    assert_eq_str(b.row_text(1), "Ana   31    ")
+    assert_eq_str(b.row_text(2), "Bo    9     ")
+}
+
+fun test_columns_size_to_content() {
+    let b = Buffer.new(14, 2)
+    let t = Table.new(["A", "B"])
+    t.row(["wide cell", "x"])
+    t.render(Rect.new(0, 0, 14, 2), b)
+    assert_eq_str(b.row_text(1), "wide cell  x  ")
+}
+
+fun test_wide_table_shrinks_to_fit() {
+    let b = Buffer.new(8, 2)
+    let t = Table.new(["AAAA", "BBBB"])
+    t.row(["11111111", "22222222"])
+    t.render(Rect.new(0, 0, 8, 2), b)
+    // The row fits the area instead of spilling.
+    assert_eq_str(b.row_text(1).length().to_string(), "8")
+}
+
+fun test_short_rows_leave_blank_cells() {
+    let b = Buffer.new(10, 2)
+    let t = Table.new(["A", "B"])
+    t.row(["only"])
+    t.render(Rect.new(0, 0, 10, 2), b)
+    assert_eq_str(b.row_text(1), "only      ")
+}
+
+fun test_selection_scrolls_into_view() {
+    let b = Buffer.new(6, 2)
+    let t = Table.new(["N"])
+    t.row(["r0"])
+    t.row(["r1"])
+    t.row(["r2"])
+    let sel = t.selected(2)
+    sel.render(Rect.new(0, 0, 6, 2), b)
+    assert_eq_str(b.row_text(1), "r2    ")
+}

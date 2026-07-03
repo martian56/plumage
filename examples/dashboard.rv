@@ -1,0 +1,118 @@
+// A dashboard with tabs, animated gauges, a process table, and a spinner.
+// Keys: 1 and 2 or the arrows switch tabs, q quits.
+
+import std/string
+import "github.com/martian56/perch/keys" { Key, MouseEvent, MouseKind }
+import "../lib" { App, Event, Frame, Step, next, quit, run }
+import "../layout" { Rect, Constraint, split_v, split_h }
+import "../style" { Style, Color }
+import "../text" { Align }
+import "../widgets/block" { Block }
+import "../widgets/gauge" { Gauge }
+import "../widgets/paragraph" { Paragraph }
+import "../widgets/spinner" { Spinner }
+import "../widgets/table" { Table }
+import "../widgets/tabs" { Tabs }
+
+struct Dash {
+    tick: Int,
+    tab: Int,
+}
+
+fun dash_init() -> Dash {
+    return Dash { tick: 0, tab: 0 }
+}
+
+fun dash_update(m: Dash, e: Event) -> Step<Dash> {
+    match e {
+        KeyPress(k) -> {
+            match k {
+                Char(c) -> {
+                    if c == "q" {
+                        return quit(m)
+                    }
+                    if c == "1" {
+                        return next(Dash { tick: m.tick, tab: 0 })
+                    }
+                    if c == "2" {
+                        return next(Dash { tick: m.tick, tab: 1 })
+                    }
+                },
+                Left -> {
+                    return next(Dash { tick: m.tick, tab: 0 })
+                },
+                Right -> {
+                    return next(Dash { tick: m.tick, tab: 1 })
+                },
+                Ctrl(c) -> {
+                    if c == "c" {
+                        return quit(m)
+                    }
+                },
+                _ -> {},
+            }
+        },
+        Tick -> {
+            return next(Dash { tick: m.tick + 1, tab: m.tab })
+        },
+        _ -> {},
+    }
+    return next(m)
+}
+
+fun dash_view(m: Dash, f: Frame) {
+    let rows = split_v(f.area(), [Constraint.Len(1), Constraint.Fill(1), Constraint.Len(1)])
+    Tabs.new(["Overview", "About"]).selected(m.tab).highlight_style(
+        Style.new().bold().fg(Color.Cyan),
+    ).render(rows[0], f.buf)
+    if m.tab == 0 {
+        _overview(m, rows[1], f)
+    } else {
+        _about(rows[1], f)
+    }
+    Spinner.new(m.tick).label("running, q quits").style(Style.new().fg(Color.Gray)).render(
+        rows[2],
+        f.buf,
+    )
+}
+
+fun _overview(m: Dash, area: Rect, f: Frame) {
+    let cols = split_h(area, [Constraint.Pct(45), Constraint.Fill(1)])
+    let left = Block.new().title("Load").rounded().title_style(Style.new().bold())
+    left.render(cols[0], f.buf)
+    let gauges = split_v(
+        left.inner(cols[0]).inner(1),
+        [Constraint.Len(1), Constraint.Len(1), Constraint.Len(1)],
+    )
+    Gauge.new((m.tick * 3) % 101).label("cpu").render(gauges[0], f.buf)
+    Gauge.new((m.tick * 7 + 40) % 101).label("mem").bar_style(Style.new().fg(Color.Yellow)).render(
+        gauges[1],
+        f.buf,
+    )
+    Gauge.new((m.tick * 5 + 70) % 101).label("net").bar_style(Style.new().fg(Color.Magenta)).render(
+        gauges[2],
+        f.buf,
+    )
+    let right = Block.new().title("Processes").rounded().title_style(Style.new().bold())
+    right.render(cols[1], f.buf)
+    let t = Table.new(["pid", "name", "cpu"])
+    t.row(["311", "raven", "42%"])
+    t.row(["87", "rvpm", "11%"])
+    t.row(["1204", "plumage", "7%"])
+    t.row(["9", "perch", "1%"])
+    t.selected(m.tick % 4).render(right.inner(cols[1]), f.buf)
+}
+
+fun _about(area: Rect, f: Frame) {
+    let box = Block.new().title("About").double()
+    box.render(area, f.buf)
+    Paragraph.new(
+        "plumage renders only what changed between frames, so this page costs nothing while the spinner below keeps animating.\n\nPress 1 or the left arrow to go back.",
+    ).wrapped().align(Align.Left).render(box.inner(area).inner(1), f.buf)
+}
+
+// Entry point used by src/main.rv.
+fun dashboard_main() -> Bool {
+    let app = App { init: dash_init, update: dash_update, view: dash_view, tick_ms: 120 }
+    return run<Dash>(app)
+}

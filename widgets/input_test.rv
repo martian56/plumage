@@ -1,0 +1,75 @@
+import std/string
+import std/test { assert_eq_str, assert_eq_int, assert_true, assert_false }
+import "github.com/martian56/perch/keys" { Key }
+import "./input" { TextInput }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_insert_at_end() {
+    let t = TextInput.new()
+    t.insert("hi")
+    assert_eq_str(t.value, "hi")
+    assert_eq_int(t.cursor, 2)
+}
+
+fun test_insert_in_the_middle() {
+    let t = TextInput.with_value("ad")
+    t.left()
+    t.insert("bc")
+    assert_eq_str(t.value, "abcd")
+}
+
+fun test_backspace_removes_before_cursor() {
+    let t = TextInput.with_value("abc")
+    t.backspace()
+    assert_eq_str(t.value, "ab")
+    assert_eq_int(t.cursor, 2)
+}
+
+fun test_backspace_handles_multibyte() {
+    let t = TextInput.with_value("a你")
+    t.backspace()
+    assert_eq_str(t.value, "a")
+    assert_eq_int(t.cursor, 1)
+}
+
+fun test_delete_removes_at_cursor() {
+    let t = TextInput.with_value("abc")
+    t.left()
+    t.left()
+    t.delete()
+    assert_eq_str(t.value, "ac")
+}
+
+fun test_cursor_moves_stop_at_edges() {
+    let t = TextInput.with_value("ab")
+    t.right()
+    assert_eq_int(t.cursor, 2)
+    t.left()
+    t.left()
+    t.left()
+    assert_eq_int(t.cursor, 0)
+}
+
+fun test_handle_key_edits_and_reports() {
+    let t = TextInput.new()
+    assert_true(t.handle_key(Key.Char("x")))
+    assert_true(t.handle_key(Key.Backspace))
+    assert_false(t.handle_key(Key.Enter))
+    assert_eq_str(t.value, "")
+}
+
+fun test_render_shows_value_and_cursor() {
+    let b = Buffer.new(6, 1)
+    let t = TextInput.with_value("abc")
+    t.render(Rect.new(0, 0, 6, 1), b)
+    assert_eq_str(b.row_text(0), "abc   ")
+}
+
+fun test_render_scrolls_to_cursor() {
+    let b = Buffer.new(4, 1)
+    let t = TextInput.with_value("abcdefgh")
+    t.render(Rect.new(0, 0, 4, 1), b)
+    // Cursor at the end: the view shows the tail.
+    assert_eq_str(b.row_text(0), "fgh ")
+}

@@ -1,0 +1,110 @@
+import std/string
+import std/test { assert_eq_int, assert_eq_str, assert_true, assert_false }
+import "./buffer" { Buffer, Cell, diff, full_redraw }
+import "./style" { Style, Color }
+import "./layout" { Rect }
+
+fun test_new_buffer_is_blank() {
+    let b = Buffer.new(4, 2)
+    assert_eq_str(b.row_text(0), "    ")
+    assert_eq_str(b.row_text(1), "    ")
+}
+
+fun test_set_string_plain() {
+    let b = Buffer.new(10, 1)
+    let after = b.set_string(2, 0, "hi", Style.new())
+    assert_eq_str(b.row_text(0), "  hi      ")
+    assert_eq_int(after, 4)
+}
+
+fun test_set_string_clips_at_edge() {
+    let b = Buffer.new(5, 1)
+    b.set_string(3, 0, "long", Style.new())
+    assert_eq_str(b.row_text(0), "   lo")
+}
+
+fun test_set_string_wide_takes_two_cells() {
+    let b = Buffer.new(6, 1)
+    let after = b.set_string(0, 0, "你a", Style.new())
+    assert_eq_int(after, 3)
+    assert_eq_str(b.get(0, 0).ch, "你")
+    assert_eq_str(b.get(1, 0).ch, "")
+    assert_eq_str(b.get(2, 0).ch, "a")
+}
+
+fun test_wide_char_at_edge_becomes_space() {
+    let b = Buffer.new(3, 1)
+    b.set_string(2, 0, "你", Style.new())
+    assert_eq_str(b.get(2, 0).ch, " ")
+}
+
+fun test_out_of_bounds_writes_are_dropped() {
+    let b = Buffer.new(3, 1)
+    b.set(5, 0, "x", Style.new())
+    b.set(0, 9, "x", Style.new())
+    b.set_string(0, 4, "row is out", Style.new())
+    assert_eq_str(b.row_text(0), "   ")
+}
+
+fun test_fill() {
+    let b = Buffer.new(4, 3)
+    b.fill(Rect.new(1, 1, 2, 2), "#", Style.new())
+    assert_eq_str(b.row_text(0), "    ")
+    assert_eq_str(b.row_text(1), " ## ")
+    assert_eq_str(b.row_text(2), " ## ")
+}
+
+fun test_diff_of_identical_buffers_is_empty() {
+    let a = Buffer.new(5, 2)
+    let b = Buffer.new(5, 2)
+    a.set_string(0, 0, "same", Style.new())
+    b.set_string(0, 0, "same", Style.new())
+    assert_eq_str(diff(a, b), "")
+}
+
+fun test_diff_repaints_only_changes() {
+    let a = Buffer.new(5, 1)
+    let b = Buffer.new(5, 1)
+    a.set_string(0, 0, "aaaaa", Style.new())
+    b.set_string(0, 0, "aaba", Style.new())
+    // Cells 2 and 4 changed: b at 2, then the trailing space at 4.
+    let out = diff(a, b)
+    assert_true(out.contains("\u{1b}[1;3H"))
+    assert_true(out.contains("b"))
+}
+
+fun test_diff_detects_style_change() {
+    let a = Buffer.new(3, 1)
+    let b = Buffer.new(3, 1)
+    a.set_string(0, 0, "x", Style.new())
+    b.set_string(0, 0, "x", Style.new().fg(Color.Red))
+    let out = diff(a, b)
+    assert_true(out.contains("31m"))
+}
+
+fun test_diff_skips_cursor_moves_for_contiguous_runs() {
+    let a = Buffer.new(4, 1)
+    let b = Buffer.new(4, 1)
+    b.set_string(0, 0, "abcd", Style.new())
+    let out = diff(a, b)
+    // One position, then the four characters back to back.
+    assert_eq_int(out.count("\u{1b}["), 2)
+    assert_true(out.contains("abcd"))
+}
+
+fun test_full_redraw_contains_every_row() {
+    let b = Buffer.new(3, 2)
+    b.set_string(0, 0, "ab", Style.new())
+    b.set_string(0, 1, "cd", Style.new())
+    let out = full_redraw(b)
+    assert_true(out.contains("ab "))
+    assert_true(out.contains("cd "))
+    assert_true(out.contains("\u{1b}[2J"))
+}
+
+fun test_diff_size_change_falls_back_to_full_redraw() {
+    let a = Buffer.new(2, 1)
+    let b = Buffer.new(3, 1)
+    let out = diff(a, b)
+    assert_true(out.contains("\u{1b}[2J"))
+}

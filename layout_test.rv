@@ -1,0 +1,73 @@
+import std/test { assert_eq_int, assert_true, assert_false }
+import "./layout" { Rect, Constraint, split_h, split_v }
+
+fun test_inner_shrinks_all_sides() {
+    let r = Rect.new(2, 3, 10, 8).inner(1)
+    assert_eq_int(r.x, 3)
+    assert_eq_int(r.y, 4)
+    assert_eq_int(r.w, 8)
+    assert_eq_int(r.h, 6)
+}
+
+fun test_inner_collapses_when_too_small() {
+    let r = Rect.new(0, 0, 1, 1).inner(1)
+    assert_true(r.is_empty())
+}
+
+fun test_contains() {
+    let r = Rect.new(5, 5, 3, 3)
+    assert_true(r.contains(5, 5))
+    assert_true(r.contains(7, 7))
+    assert_false(r.contains(8, 5))
+    assert_false(r.contains(4, 6))
+}
+
+fun test_split_h_lengths() {
+    let parts = split_h(Rect.new(0, 0, 30, 5), [Constraint.Len(10), Constraint.Len(20)])
+    assert_eq_int(parts.len(), 2)
+    assert_eq_int(parts[0].x, 0)
+    assert_eq_int(parts[0].w, 10)
+    assert_eq_int(parts[1].x, 10)
+    assert_eq_int(parts[1].w, 20)
+    assert_eq_int(parts[1].h, 5)
+}
+
+fun test_split_v_percent() {
+    let parts = split_v(Rect.new(0, 0, 10, 20), [Constraint.Pct(25), Constraint.Pct(75)])
+    assert_eq_int(parts[0].h, 5)
+    assert_eq_int(parts[1].y, 5)
+    assert_eq_int(parts[1].h, 15)
+}
+
+fun test_fill_shares_leftover_by_weight() {
+    let parts = split_h(
+        Rect.new(0, 0, 40, 1),
+        [Constraint.Len(10), Constraint.Fill(1), Constraint.Fill(2)],
+    )
+    assert_eq_int(parts[0].w, 10)
+    assert_eq_int(parts[1].w, 10)
+    assert_eq_int(parts[2].w, 20)
+}
+
+fun test_min_gets_floor_plus_share() {
+    let parts = split_h(Rect.new(0, 0, 30, 1), [Constraint.Min(10), Constraint.Fill(1)])
+    assert_eq_int(parts[0].w, 20)
+    assert_eq_int(parts[1].w, 10)
+}
+
+fun test_over_budget_cuts_from_the_end() {
+    let parts = split_h(Rect.new(0, 0, 15, 1), [Constraint.Len(10), Constraint.Len(10)])
+    assert_eq_int(parts[0].w, 10)
+    assert_eq_int(parts[1].w, 5)
+}
+
+fun test_rounding_crumbs_go_to_last_fill() {
+    let parts = split_h(
+        Rect.new(0, 0, 10, 1),
+        [Constraint.Fill(1), Constraint.Fill(1), Constraint.Fill(1)],
+    )
+    assert_eq_int(parts[0].w, 3)
+    assert_eq_int(parts[1].w, 3)
+    assert_eq_int(parts[2].w, 4)
+    assert_eq_int(parts[2].x, 6)
+}

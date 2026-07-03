@@ -1,0 +1,167 @@
+// Multi-line styled text with alignment, optional wrapping, and vertical
+// scrolling. Lines built from a plain string keep the paragraph's style;
+// lines built from spans keep their own.
+
+import std/string
+import "github.com/martian56/wingspan" { truncate, width }
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+import "../text" { Span, Line, Align, align_offset, wrap }
+
+struct Paragraph {
+    lines: List<Line>,
+    style: Style,
+    align: Align,
+    wrapped: Bool,
+    scroll: Int,
+}
+
+impl Paragraph {
+    fun new(text: String) -> Paragraph {
+        let lines: List<Line> = []
+        let parts = text.lines()
+        let i = 0
+        while i < parts.len() {
+            lines.push(Line.raw(parts[i]))
+            i = i + 1
+        }
+        if lines.len() == 0 {
+            lines.push(Line.raw(""))
+        }
+        return Paragraph {
+            lines,
+            style: Style.new(),
+            align: Align.Left,
+            wrapped: false,
+            scroll: 0,
+        }
+    }
+
+    fun from_lines(lines: List<Line>) -> Paragraph {
+        return Paragraph {
+            lines,
+            style: Style.new(),
+            align: Align.Left,
+            wrapped: false,
+            scroll: 0,
+        }
+    }
+
+    fun style(self, s: Style) -> Paragraph {
+        return Paragraph {
+            lines: self.lines,
+            style: s,
+            align: self.align,
+            wrapped: self.wrapped,
+            scroll: self.scroll,
+        }
+    }
+
+    fun align(self, a: Align) -> Paragraph {
+        return Paragraph {
+            lines: self.lines,
+            style: self.style,
+            align: a,
+            wrapped: self.wrapped,
+            scroll: self.scroll,
+        }
+    }
+
+    // Word-wrap to the render width. Wrapping applies to single-span lines;
+    // a line already split into styled spans renders as one row.
+    fun wrapped(self) -> Paragraph {
+        return Paragraph {
+            lines: self.lines,
+            style: self.style,
+            align: self.align,
+            wrapped: true,
+            scroll: self.scroll,
+        }
+    }
+
+    // Skip the first n display rows.
+    fun scroll(self, n: Int) -> Paragraph {
+        return Paragraph {
+            lines: self.lines,
+            style: self.style,
+            align: self.align,
+            wrapped: self.wrapped,
+            scroll: n,
+        }
+    }
+
+    // The display rows this paragraph produces at a given width. Useful for
+    // sizing a scroll range.
+    fun row_count(self, w: Int) -> Int {
+        return self._rows(w).len()
+    }
+
+    fun _rows(self, w: Int) -> List<Line> {
+        let rows: List<Line> = []
+        let i = 0
+        while i < self.lines.len() {
+            let line = self.lines[i]
+            if self.wrapped && line.spans.len() == 1 {
+                let pieces = wrap(line.spans[0].text, w)
+                let sty = line.spans[0].style
+                let j = 0
+                while j < pieces.len() {
+                    rows.push(Line { spans: [Span.styled(pieces[j], sty)] })
+                    j = j + 1
+                }
+            } else {
+                rows.push(line)
+            }
+            i = i + 1
+        }
+        return rows
+    }
+}
+
+impl Widget for Paragraph {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() {
+            return
+        }
+        let rows = self._rows(area.w)
+        let y = 0
+        while y < area.h && self.scroll + y < rows.len() {
+            let line = rows[self.scroll + y]
+            let x = area.x + align_offset(self.align, line.width(), area.w)
+            let s = 0
+            while s < line.spans.len() {
+                let span = line.spans[s]
+                let rem = area.x + area.w - x
+                if rem <= 0 {
+                    s = line.spans.len()
+                } else {
+                    let sty = _merge(self.style, span.style)
+                    x = buf.set_string(x, area.y + y, truncate(span.text, rem), sty)
+                    s = s + 1
+                }
+            }
+            y = y + 1
+        }
+        return
+    }
+}
+
+// A span with an untouched default style inherits the paragraph style.
+fun _merge(base: Style, over: Style) -> Style {
+    if _is_default(over) {
+        return base
+    }
+    return over
+}
+
+fun _is_default(s: Style) -> Bool {
+    let d = Style.new()
+    return match s.fg {
+        Default -> match s.bg {
+            Default -> !s.bold && !s.dim && !s.italic && !s.underline && !s.reverse,
+            _ -> false,
+        },
+        _ -> false,
+    }
+}

@@ -1,0 +1,97 @@
+// A one-row tab bar. Highlights the selected title; you draw the matching
+// content below it.
+
+import std/string
+import "github.com/martian56/wingspan" { truncate, width }
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style }
+
+struct Tabs {
+    titles: List<String>,
+    selected: Int,
+    style: Style,
+    highlight_style: Style,
+    divider: String,
+}
+
+impl Tabs {
+    fun new(titles: List<String>) -> Tabs {
+        return Tabs {
+            titles,
+            selected: 0,
+            style: Style.new(),
+            highlight_style: Style.new().reverse(),
+            divider: " | ",
+        }
+    }
+
+    fun selected(self, i: Int) -> Tabs {
+        return Tabs {
+            titles: self.titles,
+            selected: i,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            divider: self.divider,
+        }
+    }
+
+    fun style(self, s: Style) -> Tabs {
+        return Tabs {
+            titles: self.titles,
+            selected: self.selected,
+            style: s,
+            highlight_style: self.highlight_style,
+            divider: self.divider,
+        }
+    }
+
+    fun highlight_style(self, s: Style) -> Tabs {
+        return Tabs {
+            titles: self.titles,
+            selected: self.selected,
+            style: self.style,
+            highlight_style: s,
+            divider: self.divider,
+        }
+    }
+
+    fun divider(self, d: String) -> Tabs {
+        return Tabs {
+            titles: self.titles,
+            selected: self.selected,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            divider: d,
+        }
+    }
+}
+
+impl Widget for Tabs {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() {
+            return
+        }
+        let x = area.x
+        let i = 0
+        while i < self.titles.len() {
+            let rem = area.x + area.w - x
+            if rem <= 0 {
+                return
+            }
+            let sty = self.style
+            if i == self.selected {
+                sty = self.highlight_style
+            }
+            x = buf.set_string(x, area.y, truncate(self.titles[i], rem), sty)
+            if i < self.titles.len() - 1 {
+                let drem = area.x + area.w - x
+                if drem > 0 {
+                    x = buf.set_string(x, area.y, truncate(self.divider, drem), self.style)
+                }
+            }
+            i = i + 1
+        }
+        return
+    }
+}

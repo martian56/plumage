@@ -1,0 +1,76 @@
+// A vertical scrollbar: a track with a proportional thumb. Render it in a
+// one-column rect beside the content it describes.
+
+import std/string
+import "../buffer" { Buffer, Widget }
+import "../layout" { Rect }
+import "../style" { Style, Color }
+
+struct Scrollbar {
+    total: Int,
+    visible: Int,
+    position: Int,
+    style: Style,
+    thumb_style: Style,
+}
+
+impl Scrollbar {
+    fun new(total: Int, visible: Int, position: Int) -> Scrollbar {
+        return Scrollbar {
+            total,
+            visible,
+            position,
+            style: Style.new().fg(Color.Gray),
+            thumb_style: Style.new(),
+        }
+    }
+
+    fun style(self, s: Style) -> Scrollbar {
+        return Scrollbar {
+            total: self.total,
+            visible: self.visible,
+            position: self.position,
+            style: s,
+            thumb_style: self.thumb_style,
+        }
+    }
+
+    fun thumb_style(self, s: Style) -> Scrollbar {
+        return Scrollbar {
+            total: self.total,
+            visible: self.visible,
+            position: self.position,
+            style: self.style,
+            thumb_style: s,
+        }
+    }
+}
+
+impl Widget for Scrollbar {
+    fun render(self, area: Rect, buf: Buffer) {
+        if area.is_empty() || area.h <= 0 {
+            return
+        }
+        let y = 0
+        while y < area.h {
+            buf.set(area.x, area.y + y, "│", self.style)
+            y = y + 1
+        }
+        if self.total <= self.visible {
+            return
+        }
+        let thumb_h = area.h * self.visible / self.total
+        if thumb_h < 1 {
+            thumb_h = 1
+        }
+        let max_pos = self.total - self.visible
+        let travel = area.h - thumb_h
+        let top = self.position * travel / max_pos
+        let t = 0
+        while t < thumb_h {
+            buf.set(area.x, area.y + top + t, "█", self.thumb_style)
+            t = t + 1
+        }
+        return
+    }
+}

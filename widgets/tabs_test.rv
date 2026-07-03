@@ -1,0 +1,23 @@
+import std/string
+import std/test { assert_eq_str }
+import "./tabs" { Tabs }
+import "../buffer" { Buffer }
+import "../layout" { Rect }
+
+fun test_titles_with_divider() {
+    let b = Buffer.new(11, 1)
+    Tabs.new(["one", "two"]).render(Rect.new(0, 0, 11, 1), b)
+    assert_eq_str(b.row_text(0), "one | two  ")
+}
+
+fun test_clipping_at_the_edge() {
+    let b = Buffer.new(5, 1)
+    Tabs.new(["alpha", "beta"]).render(Rect.new(0, 0, 5, 1), b)
+    assert_eq_str(b.row_text(0), "alpha")
+}
+
+fun test_custom_divider() {
+    let b = Buffer.new(9, 1)
+    Tabs.new(["a", "b"]).divider(" · ").render(Rect.new(0, 0, 9, 1), b)
+    assert_eq_str(b.row_text(0), "a · b    ")
+}
