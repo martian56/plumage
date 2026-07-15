@@ -10,7 +10,7 @@ plumage owns the terminal, the event loop, and the drawing. You describe
 what the screen should look like for a given model; it figures out which
 cells changed since the last frame and repaints only those.
 
-```raven
+```rust
 import "github.com/martian56/plumage" { App, Event, Frame, Step, next, quit, run }
 import "github.com/martian56/plumage/widgets/paragraph" { Paragraph }
 import "github.com/martian56/perch/keys" { Key }
@@ -78,7 +78,7 @@ special: it arrives as `Ctrl("c")` and quitting is your decision.
 Split any rect into rows or columns with constraints, then render into the
 pieces:
 
-```raven
+```rust
 import "github.com/martian56/plumage/layout" { Constraint, split_v }
 
 let rows = split_v(f.area(), [
@@ -115,7 +115,7 @@ one stateful exception: keep it in your model and feed keys to
 Styling lives in `plumage/style`: named colors, the 256-color palette,
 RGB, and the usual attributes, as immutable builders:
 
-```raven
+```rust
 Style.new().fg(Color.Cyan).bold()
 Style.new().bg(Color.Rgb(30, 30, 46))
 ```
