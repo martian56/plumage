@@ -51,8 +51,8 @@ fun main() {
 ## Install
 
 ```
-rvpm add github.com/martian56/plumage@v0.1.0
-rvpm add github.com/martian56/perch@v0.1.0
+rvpm add github.com/martian56/plumage@v0.2.0
+rvpm add github.com/martian56/perch@v0.2.0
 ```
 
 perch is plumage's terminal layer; your code imports its `Key` and mouse
@@ -68,10 +68,23 @@ Three functions around one model type:
   `next(model)` to keep going or `quit(model)` to stop.
 - `view(m, frame)` describes one frame by rendering widgets into regions.
 
-`Event` covers `KeyPress(Key)`, `Mouse(MouseEvent)`, `Resize(w, h)`, and
-`Tick`. Ticks fire whenever `tick_ms` passes without input, which is what
-makes spinners spin and gauges move while the app sits idle. Ctrl+C is not
-special: it arrives as `Ctrl("c")` and quitting is your decision.
+`Event` covers `KeyPress(Key)`, `Mouse(MouseEvent)`, `Paste(String)`,
+`Resize(w, h)`, and `Tick`. Ticks fire whenever `tick_ms` passes without
+input, which is what makes spinners spin and gauges move while the app sits
+idle. Ctrl+C is not special: it arrives as `Ctrl("c")` and quitting is your
+decision.
+
+`Paste` is one whole bracketed paste with newlines normalized to `\n`: the
+run loop switches the terminal mode on, so pasted text reaches `update` as
+a single event instead of a keystroke stream where a pasted newline would
+act as Enter. Insert it into a `TextInput` with `input.insert(text)`:
+
+```rust
+Paste(text) -> {
+    m.entry.insert(text)
+    return next(m)
+},
+```
 
 ## Layout
 
@@ -102,7 +115,7 @@ of a split to build grids.
 | `Table` | `table` | Header plus rows, content-sized columns, selectable |
 | `Tabs` | `tabs` | One-row tab bar |
 | `Gauge` | `gauge` | Progress bar with a centered label |
-| `TextInput` | `input` | Single-line editor: cursor, insert, backspace, delete, arrows, home, end |
+| `TextInput` | `input` | Single-line editor: cursor, insert, backspace, delete, arrows, home, end; pasted newlines render as a return glyph while the value keeps them |
 | `Scrollbar` | `scrollbar` | Proportional vertical thumb |
 | `Spinner` | `spinner` | Braille activity indicator driven by ticks |
 
@@ -159,7 +172,7 @@ supported.
 
 ```
 rvpm build    # type-check the library and compile the demo
-rvpm test     # 85 tests, no terminal needed
+rvpm test     # buffer, layout, text, and widget tests, no terminal needed
 rvpm fmt
 ```
 
