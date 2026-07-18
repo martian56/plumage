@@ -50,10 +50,12 @@ import "./layout" { Rect }
 
 // Everything update can react to. Tick fires when tick_ms passes without
 // input, which is what drives animation. Resize arrives with the new size
-// already applied to the frame.
+// already applied to the frame. Paste is one whole bracketed paste (perch
+// normalizes its newlines), so pasted text never replays as keystrokes.
 enum Event {
     KeyPress(Key),
     Mouse(MouseEvent),
+    Paste(String),
     Resize(Int, Int),
     Tick,
 }
@@ -102,6 +104,7 @@ fun run<M>(app: App<M>) -> Bool {
         return false
     }
     term.mouse_on()
+    term.paste_on()
     let size = term.size()
     let model = (app.init)()
     let frame = Frame { buf: Buffer.new(size.w, size.h) }
@@ -120,6 +123,9 @@ fun run<M>(app: App<M>) -> Bool {
             },
             Mouse(m) -> {
                 ev = Event.Mouse(m)
+            },
+            Paste(s) -> {
+                ev = Event.Paste(s)
             },
             Idle -> {
                 ev = Event.Tick
