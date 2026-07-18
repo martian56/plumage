@@ -1,7 +1,9 @@
 # plumage design
 
-Status: implemented in v0.1.0. This records the decisions and the reasons,
-so future changes argue with the reasons instead of guessing.
+Status: implemented in v0.1.0; v0.2.0 added the Paste event (bracketed
+paste via perch 0.2.0) and a TextInput that renders embedded newlines. This
+records the decisions and the reasons, so future changes argue with the
+reasons instead of guessing.
 
 ## Goal
 
