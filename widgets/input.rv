@@ -115,10 +115,19 @@ impl TextInput {
         return prev
     }
 
-    // Columns before the cursor, for placing the cursor cell.
+    // Columns before the cursor, for placing the cursor cell. Measured on
+    // the display form so embedded newlines (from a paste) line up with what
+    // render draws.
     fun _cursor_col(self) -> Int {
-        return width(self.value.substring(0, self.cursor))
+        return width(_display(self.value.substring(0, self.cursor)))
     }
+}
+
+// The single-line display form of a value: embedded newlines (a pasted
+// block) show as a return glyph instead of corrupting the row. The value
+// itself keeps the real newlines; only drawing substitutes.
+fun _display(s: String) -> String {
+    return s.replace("\n", "⏎")
 }
 
 impl Widget for TextInput {
@@ -132,7 +141,7 @@ impl Widget for TextInput {
         if cur >= area.w {
             skip = cur - area.w + 1
         }
-        let visible = _drop_cols(self.value, skip)
+        let visible = _drop_cols(_display(self.value), skip)
         buf.set_string(area.x, area.y, truncate(visible, area.w), self.style)
         if self.focused {
             let cx = area.x + cur - skip
@@ -140,7 +149,7 @@ impl Widget for TextInput {
             let under = " "
             if at < self.value.length() {
                 let c = decode(self.value, at)
-                under = self.value.substring(at, at + c.size)
+                under = _display(self.value.substring(at, at + c.size))
             }
             buf.set(cx, area.y, under, self.style.reverse())
         }

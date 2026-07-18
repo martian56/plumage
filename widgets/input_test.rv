@@ -73,3 +73,20 @@ fun test_render_scrolls_to_cursor() {
     // Cursor at the end: the view shows the tail.
     assert_eq_str(b.row_text(0), "fgh ")
 }
+
+fun test_render_shows_newlines_as_return_glyphs() {
+    let b = Buffer.new(6, 1)
+    let t = TextInput.with_value("a\nb")
+    t.render(Rect.new(0, 0, 6, 1), b)
+    // The value keeps the real newline; only the drawing substitutes.
+    assert_eq_str(t.value, "a\nb")
+    assert_eq_str(b.row_text(0), "a⏎b   ")
+}
+
+fun test_insert_accepts_a_multiline_block() {
+    let t = TextInput.with_value("x")
+    t.insert("1\n2")
+    assert_eq_str(t.value, "x1\n2")
+    // The cursor lands after the inserted block.
+    assert_eq_int(t.cursor, 4)
+}
