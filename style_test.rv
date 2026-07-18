@@ -54,3 +54,10 @@ fun test_style_key_matches_equality() {
     assert_true(style_key(a) == style_key(b))
     assert_false(style_key(a) == style_key(Style.new()))
 }
+
+fun test_strike_emits_sgr_9() {
+    let s = Style.new().strike()
+    assert_eq_str(codes_text(sgr_codes(s)), ";0;9")
+    let mixed = Style.new().bold().strike()
+    assert_eq_str(codes_text(sgr_codes(mixed)), ";0;1;9")
+}
