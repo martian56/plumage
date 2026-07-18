@@ -27,6 +27,7 @@ struct Style {
     italic: Bool,
     underline: Bool,
     reverse: Bool,
+    strike: Bool,
 }
 
 impl Style {
@@ -39,6 +40,7 @@ impl Style {
             italic: false,
             underline: false,
             reverse: false,
+            strike: false,
         }
     }
 
@@ -85,6 +87,12 @@ impl Style {
         return s
     }
 
+    fun strike(self) -> Style {
+        let s = self._copy()
+        s.strike = true
+        return s
+    }
+
     fun _copy(self) -> Style {
         return Style {
             fg: self.fg,
@@ -94,6 +102,7 @@ impl Style {
             italic: self.italic,
             underline: self.underline,
             reverse: self.reverse,
+            strike: self.strike,
         }
     }
 }
@@ -117,6 +126,9 @@ fun sgr_codes(s: Style) -> List<Int> {
     }
     if s.reverse {
         out.push(7)
+    }
+    if s.strike {
+        out.push(9)
     }
     _push_color(out, s.fg, 30, 38)
     _push_color(out, s.bg, 40, 48)
