@@ -44,7 +44,7 @@
 
 import std/string
 import "github.com/martian56/perch" { Terminal, Size }
-import "github.com/martian56/perch/keys" { InputEvent, Key, MouseEvent }
+import "github.com/martian56/perch/keys" { InputEvent, Key, MouseEvent, MouseKind }
 import "./buffer" { Buffer, Widget, diff, full_redraw }
 import "./layout" { Rect }
 
@@ -113,8 +113,40 @@ fun run<M>(app: App<M>) -> Bool {
     term.flush()
     let prev = frame.buf
     let running = true
+    // An event read past the end of a drag drain, delivered next iteration.
+    let held = InputEvent.Idle
+    let has_held = false
     while running {
-        let got = term.read_event(app.tick_ms)
+        let got = InputEvent.Idle
+        if has_held {
+            got = held
+            has_held = false
+        } else {
+            got = term.read_event(app.tick_ms)
+        }
+        // Coalesce mouse drag and move bursts: they arrive far faster than
+        // any redraw matters, and only the last position counts, so without
+        // this a drag floods the loop with one full render per report and
+        // selecting text visibly slows the app. Non-coalescable events stop
+        // the drain and are handled on the next iteration via `held`.
+        if _coalesces(got) {
+            let draining = true
+            while draining {
+                let nxt = term.read_event(0)
+                if _coalesces(nxt) {
+                    got = nxt
+                } else {
+                    match nxt {
+                        Idle -> {},
+                        _ -> {
+                            held = nxt
+                            has_held = true
+                        },
+                    }
+                    draining = false
+                }
+            }
+        }
         let ev = Event.Tick
         let closed = false
         match got {
@@ -163,4 +195,18 @@ fun run<M>(app: App<M>) -> Bool {
     }
     term.restore()
     return true
+}
+
+// Whether an input event can be replaced by a newer one of the same kind:
+// mouse drags and motion reports, where only the latest position matters.
+// Public so the policy is testable without a terminal.
+fun _coalesces(e: InputEvent) -> Bool {
+    return match e {
+        Mouse(m) -> match m.kind {
+            Drag -> true,
+            Move -> true,
+            _ -> false,
+        },
+        _ -> false,
+    }
 }
