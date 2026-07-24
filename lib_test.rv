@@ -1,0 +1,19 @@
+import std/test { assert_true }
+import "github.com/martian56/perch/keys" { InputEvent, Key, MouseEvent, MouseKind }
+import "./lib" { _coalesces }
+
+fun test_coalesces_only_drag_and_move() {
+    let drag = InputEvent.Mouse(MouseEvent { kind: MouseKind.Drag, button: 0, x: 1, y: 1 })
+    let mv = InputEvent.Mouse(MouseEvent { kind: MouseKind.Move, button: -1, x: 2, y: 2 })
+    let down = InputEvent.Mouse(MouseEvent { kind: MouseKind.Down, button: 0, x: 1, y: 1 })
+    let up = InputEvent.Mouse(MouseEvent { kind: MouseKind.Up, button: 0, x: 1, y: 1 })
+    let scroll = InputEvent.Mouse(MouseEvent { kind: MouseKind.ScrollUp, button: -1, x: 1, y: 1 })
+    assert_true(_coalesces(drag))
+    assert_true(_coalesces(mv))
+    // Presses, releases, and wheel steps each matter individually.
+    assert_true(!_coalesces(down))
+    assert_true(!_coalesces(up))
+    assert_true(!_coalesces(scroll))
+    assert_true(!_coalesces(InputEvent.KeyPress(Key.Enter)))
+    assert_true(!_coalesces(InputEvent.Idle))
+}
