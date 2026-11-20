@@ -2,26 +2,26 @@
 // scrolling. Lines built from a plain string keep the paragraph's style;
 // lines built from spans keep their own.
 
-import std/string
-import "github.com/martian56/wingspan" { truncate, width }
-import "../buffer" { Buffer, Widget }
-import "../layout" { Rect }
-import "../style" { Style }
-import "../text" { Span, Line, Align, align_offset, wrap }
+import std.string
+from "github.com/martian56/wingspan" import truncate, width
+from "../buffer" import Buffer, Widget
+from "../layout" import Rect
+from "../style" import Style
+from "../text" import Span, Line, Align, align_offset, wrap
 
-struct Paragraph {
-    lines: List<Line>,
-    style: Style,
-    align: Align,
-    wrapped: Bool,
-    scroll: Int,
+class Paragraph {
+    lines: list[Line]
+    style: Style
+    align: Align
+    wrapped: bool
+    scroll: int
 }
 
 impl Paragraph {
-    fun new(text: String) -> Paragraph {
-        let lines: List<Line> = []
+    fun new(text: str) -> Paragraph {
+        let lines: list[Line] = []
         let parts = text.lines()
-        let i = 0
+        var i = 0
         while i < parts.len() {
             lines.push(Line.raw(parts[i]))
             i = i + 1
@@ -29,85 +29,85 @@ impl Paragraph {
         if lines.len() == 0 {
             lines.push(Line.raw(""))
         }
-        return Paragraph {
-            lines,
+        return Paragraph(
+            lines: lines,
             style: Style.new(),
             align: Align.Left,
             wrapped: false,
             scroll: 0,
-        }
+        )
     }
 
-    fun from_lines(lines: List<Line>) -> Paragraph {
-        return Paragraph {
-            lines,
+    fun from_lines(lines: list[Line]) -> Paragraph {
+        return Paragraph(
+            lines: lines,
             style: Style.new(),
             align: Align.Left,
             wrapped: false,
             scroll: 0,
-        }
+        )
     }
 
     fun style(self, s: Style) -> Paragraph {
-        return Paragraph {
+        return Paragraph(
             lines: self.lines,
             style: s,
             align: self.align,
             wrapped: self.wrapped,
             scroll: self.scroll,
-        }
+        )
     }
 
     fun align(self, a: Align) -> Paragraph {
-        return Paragraph {
+        return Paragraph(
             lines: self.lines,
             style: self.style,
             align: a,
             wrapped: self.wrapped,
             scroll: self.scroll,
-        }
+        )
     }
 
     // Word-wrap to the render width. Wrapping applies to single-span lines;
     // a line already split into styled spans renders as one row.
     fun wrapped(self) -> Paragraph {
-        return Paragraph {
+        return Paragraph(
             lines: self.lines,
             style: self.style,
             align: self.align,
             wrapped: true,
             scroll: self.scroll,
-        }
+        )
     }
 
     // Skip the first n display rows.
-    fun scroll(self, n: Int) -> Paragraph {
-        return Paragraph {
+    fun scroll(self, n: int) -> Paragraph {
+        return Paragraph(
             lines: self.lines,
             style: self.style,
             align: self.align,
             wrapped: self.wrapped,
             scroll: n,
-        }
+        )
     }
 
     // The display rows this paragraph produces at a given width. Useful for
     // sizing a scroll range.
-    fun row_count(self, w: Int) -> Int {
+    fun row_count(self, w: int) -> int {
         return self._rows(w).len()
     }
 
-    fun _rows(self, w: Int) -> List<Line> {
-        let rows: List<Line> = []
-        let i = 0
+    fun _rows(self, w: int) -> list[Line] {
+        let rows: list[Line] = []
+        var i = 0
         while i < self.lines.len() {
             let line = self.lines[i]
-            if self.wrapped && line.spans.len() == 1 {
+            if self.wrapped and line.spans.len() == 1 {
                 let pieces = wrap(line.spans[0].text, w)
                 let sty = line.spans[0].style
-                let j = 0
+                var j = 0
                 while j < pieces.len() {
-                    rows.push(Line { spans: [Span.styled(pieces[j], sty)] })
+                    rows.push(Line(spans: [Span.styled(pieces[j], sty)]))
                     j = j + 1
                 }
             } else {
@@ -125,11 +125,11 @@ impl Widget for Paragraph {
             return
         }
         let rows = self._rows(area.w)
-        let y = 0
-        while y < area.h && self.scroll + y < rows.len() {
+        var y = 0
+        while y < area.h and self.scroll + y < rows.len() {
             let line = rows[self.scroll + y]
-            let x = area.x + align_offset(self.align, line.width(), area.w)
-            let s = 0
+            var x = area.x + align_offset(self.align, line.width(), area.w)
+            var s = 0
             while s < line.spans.len() {
                 let span = line.spans[s]
                 let rem = area.x + area.w - x
@@ -155,13 +155,15 @@ fun _merge(base: Style, over: Style) -> Style {
     return over
 }
 
-fun _is_default(s: Style) -> Bool {
+fun _is_default(s: Style) -> bool {
     let d = Style.new()
     return match s.fg {
-        Default -> match s.bg {
-            Default -> !s.bold && !s.dim && !s.italic && !s.underline && !s.reverse,
-            _ -> false,
-        },
-        _ -> false,
+        case Default {
+            match s.bg {
+                case Default { not s.bold and not s.dim and not s.italic and not s.underline and not s.reverse }
+                case _ { false }
+            }
+        }
+        case _ { false }
     }
 }

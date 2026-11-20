@@ -2,70 +2,70 @@
 // stateful: keep a TextInput in your model, pass key events to handle_key,
 // and render it each frame. The view scrolls so the cursor stays visible.
 
-import std/string
-import "github.com/martian56/wingspan" { decode, width, truncate }
-import "github.com/martian56/perch/keys" { Key }
-import "../buffer" { Buffer, Widget }
-import "../layout" { Rect }
-import "../style" { Style }
+import std.string
+from "github.com/martian56/wingspan" import decode, width, truncate
+from "github.com/martian56/perch/keys" import Key
+from "../buffer" import Buffer, Widget
+from "../layout" import Rect
+from "../style" import Style
 
-struct TextInput {
-    value: String,
-    cursor: Int,
-    style: Style,
-    focused: Bool,
+class TextInput {
+    value: str
+    cursor: int
+    style: Style
+    focused: bool
 }
 
 impl TextInput {
     fun new() -> TextInput {
-        return TextInput { value: "", cursor: 0, style: Style.new(), focused: true }
+        return TextInput(value: "", cursor: 0, style: Style.new(), focused: true)
     }
 
-    fun with_value(v: String) -> TextInput {
-        return TextInput { value: v, cursor: v.length(), style: Style.new(), focused: true }
+    fun with_value(v: str) -> TextInput {
+        return TextInput(value: v, cursor: v.length(), style: Style.new(), focused: true)
     }
 
-    fun focus(self, on: Bool) {
+    fun focus(self, on: bool) {
         self.focused = on
     }
 
     // Apply one key. Returns true when the key edited or moved anything,
     // false when it is not an editing key and the caller should handle it.
-    fun handle_key(self, k: Key) -> Bool {
+    fun handle_key(self, k: Key) -> bool {
         return match k {
-            Char(c) -> {
+            case Char(c) {
                 self.insert(c)
                 true
-            },
-            Backspace -> {
+            }
+            case Backspace {
                 self.backspace()
                 true
-            },
-            Delete -> {
+            }
+            case Delete {
                 self.delete()
                 true
-            },
-            Left -> {
+            }
+            case Left {
                 self.left()
                 true
-            },
-            Right -> {
+            }
+            case Right {
                 self.right()
                 true
-            },
-            Home -> {
+            }
+            case Home {
                 self.cursor = 0
                 true
-            },
-            End -> {
+            }
+            case End {
                 self.cursor = self.value.length()
                 true
-            },
-            _ -> false,
+            }
+            case _ { false }
         }
     }
 
-    fun insert(self, s: String) {
+    fun insert(self, s: str) {
         let before = self.value.substring(0, self.cursor)
         let after = self.value.substring(self.cursor, self.value.length())
         self.value = "${before}${s}${after}"
@@ -105,9 +105,9 @@ impl TextInput {
     }
 
     // Byte offset of the character before the cursor.
-    fun _prev_offset(self) -> Int {
-        let i = 0
-        let prev = 0
+    fun _prev_offset(self) -> int {
+        var i = 0
+        var prev = 0
         while i < self.cursor {
             prev = i
             i = i + decode(self.value, i).size
@@ -118,7 +118,7 @@ impl TextInput {
     // Columns before the cursor, for placing the cursor cell. Measured on
     // the display form so embedded newlines (from a paste) line up with what
     // render draws.
-    fun _cursor_col(self) -> Int {
+    fun _cursor_col(self) -> int {
         return width(_display(self.value.substring(0, self.cursor)))
     }
 }
@@ -126,7 +126,7 @@ impl TextInput {
 // The single-line display form of a value: embedded newlines (a pasted
 // block) show as a return glyph instead of corrupting the row. The value
 // itself keeps the real newlines; only drawing substitutes.
-fun _display(s: String) -> String {
+fun _display(s: str) -> str {
     return s.replace("\n", "⏎")
 }
 
@@ -137,7 +137,7 @@ impl Widget for TextInput {
         }
         let cur = self._cursor_col()
         // Scroll left so the cursor column fits inside the area.
-        let skip = 0
+        var skip = 0
         if cur >= area.w {
             skip = cur - area.w + 1
         }
@@ -146,7 +146,7 @@ impl Widget for TextInput {
         if self.focused {
             let cx = area.x + cur - skip
             let at = self.cursor
-            let under = " "
+            var under = " "
             if at < self.value.length() {
                 let c = decode(self.value, at)
                 under = _display(self.value.substring(at, at + c.size))
@@ -158,13 +158,13 @@ impl Widget for TextInput {
 }
 
 // Drop the first n display columns of s.
-fun _drop_cols(s: String, n: Int) -> String {
+fun _drop_cols(s: str, n: int) -> str {
     if n <= 0 {
         return s
     }
-    let dropped = 0
-    let i = 0
-    while i < s.length() && dropped < n {
+    var dropped = 0
+    var i = 0
+    while i < s.length() and dropped < n {
         let c = decode(s, i)
         dropped = dropped + c.width
         i = i + c.size

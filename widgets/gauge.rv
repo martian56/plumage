@@ -1,47 +1,47 @@
 // A progress bar with a centered label. The label defaults to the
 // percentage and draws over the bar on the middle row.
 
-import std/string
-import "github.com/martian56/wingspan" { width, truncate }
-import "../buffer" { Buffer, Widget }
-import "../layout" { Rect }
-import "../style" { Style, Color }
-import "../text" { Align, align_offset }
+import std.string
+from "github.com/martian56/wingspan" import width, truncate
+from "../buffer" import Buffer, Widget
+from "../layout" import Rect
+from "../style" import Style, Color
+from "../text" import Align, align_offset
 
-struct Gauge {
-    pct: Int,
-    label: String,
-    style: Style,
-    bar_style: Style,
+class Gauge {
+    pct: int
+    label: str
+    style: Style
+    bar_style: Style
 }
 
 impl Gauge {
-    fun new(pct: Int) -> Gauge {
-        let p = pct
+    fun new(pct: int) -> Gauge {
+        var p = pct
         if p < 0 {
             p = 0
         }
         if p > 100 {
             p = 100
         }
-        return Gauge {
+        return Gauge(
             pct: p,
             label: "",
             style: Style.new().fg(Color.Gray),
             bar_style: Style.new().fg(Color.Green),
-        }
+        )
     }
 
-    fun label(self, text: String) -> Gauge {
-        return Gauge { pct: self.pct, label: text, style: self.style, bar_style: self.bar_style }
+    fun label(self, text: str) -> Gauge {
+        return Gauge(pct: self.pct, label: text, style: self.style, bar_style: self.bar_style)
     }
 
     fun style(self, s: Style) -> Gauge {
-        return Gauge { pct: self.pct, label: self.label, style: s, bar_style: self.bar_style }
+        return Gauge(pct: self.pct, label: self.label, style: s, bar_style: self.bar_style)
     }
 
     fun bar_style(self, s: Style) -> Gauge {
-        return Gauge { pct: self.pct, label: self.label, style: self.style, bar_style: s }
+        return Gauge(pct: self.pct, label: self.label, style: self.style, bar_style: s)
     }
 }
 
@@ -51,9 +51,9 @@ impl Widget for Gauge {
             return
         }
         let filled = area.w * self.pct / 100
-        let y = area.y
+        var y = area.y
         while y < area.y + area.h {
-            let x = 0
+            var x = 0
             while x < area.w {
                 if x < filled {
                     buf.set(area.x + x, y, "█", self.bar_style)
@@ -64,7 +64,7 @@ impl Widget for Gauge {
             }
             y = y + 1
         }
-        let text = self.label
+        var text = self.label
         if text == "" {
             text = "${self.pct}%"
         }

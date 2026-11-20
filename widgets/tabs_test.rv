@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_str }
-import "./tabs" { Tabs }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str
+from "./tabs" import Tabs
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_titles_with_divider() {
     let b = Buffer.new(11, 1)

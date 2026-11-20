@@ -1,48 +1,48 @@
 // Styled text: spans, lines, wrapping, and alignment. Widgets that show
 // text build on these instead of raw strings, so one line can mix styles.
 
-import std/string
-import "github.com/martian56/wingspan" { width, truncate }
-import "./style" { Style }
+import std.string
+from "github.com/martian56/wingspan" import width, truncate
+from "./style" import Style
 
 // A run of text in one style.
-struct Span {
-    text: String,
-    style: Style,
+class Span {
+    text: str
+    style: Style
 }
 
 impl Span {
-    fun raw(text: String) -> Span {
-        return Span { text, style: Style.new() }
+    fun raw(text: str) -> Span {
+        return Span(text: text, style: Style.new())
     }
 
-    fun styled(text: String, style: Style) -> Span {
-        return Span { text, style }
+    fun styled(text: str, style: Style) -> Span {
+        return Span(text: text, style: style)
     }
 }
 
 // One display line, a sequence of spans.
-struct Line {
-    spans: List<Span>,
+class Line {
+    spans: list[Span]
 }
 
 impl Line {
-    fun raw(text: String) -> Line {
-        return Line { spans: [Span.raw(text)] }
+    fun raw(text: str) -> Line {
+        return Line(spans: [Span.raw(text)])
     }
 
-    fun styled(text: String, style: Style) -> Line {
-        return Line { spans: [Span.styled(text, style)] }
+    fun styled(text: str, style: Style) -> Line {
+        return Line(spans: [Span.styled(text, style)])
     }
 
-    fun from_spans(spans: List<Span>) -> Line {
-        return Line { spans }
+    fun from_spans(spans: list[Span]) -> Line {
+        return Line(spans: spans)
     }
 
     // Display columns over all spans.
-    fun width(self) -> Int {
-        let total = 0
-        let i = 0
+    fun width(self) -> int {
+        var total = 0
+        var i = 0
         while i < self.spans.len() {
             total = total + width(self.spans[i].text)
             i = i + 1
@@ -58,27 +58,27 @@ enum Align {
 }
 
 // The x offset that aligns a line of the given width inside avail columns.
-fun align_offset(align: Align, line_width: Int, avail: Int) -> Int {
+fun align_offset(align: Align, line_width: int, avail: int) -> int {
     let d = avail - line_width
     if d <= 0 {
         return 0
     }
     return match align {
-        Left -> 0,
-        Center -> d / 2,
-        Right -> d,
+        case Left { 0 }
+        case Center { d / 2 }
+        case Right { d }
     }
 }
 
 // Word-wrap text into lines of at most max columns, breaking on spaces and
 // hard-splitting any word wider than the limit. Existing newlines are kept.
-fun wrap(text: String, max: Int) -> List<String> {
-    let out: List<String> = []
+fun wrap(text: str, max: int) -> list[str] {
+    let out: list[str] = []
     if max <= 0 {
         return out
     }
     let paragraphs = text.lines()
-    let p = 0
+    var p = 0
     while p < paragraphs.len() {
         _wrap_paragraph(out, paragraphs[p], max)
         p = p + 1
@@ -86,15 +86,15 @@ fun wrap(text: String, max: Int) -> List<String> {
     return out
 }
 
-fun _wrap_paragraph(out: List<String>, para: String, max: Int) {
+fun _wrap_paragraph(out: list[str], para: str, max: int) {
     if width(para) <= max {
         out.push(para)
         return
     }
     let words = para.split(" ")
-    let line = ""
-    let line_w = 0
-    let i = 0
+    var line = ""
+    var line_w = 0
+    var i = 0
     while i < words.len() {
         let word = words[i]
         let ww = width(word)
@@ -105,7 +105,7 @@ fun _wrap_paragraph(out: List<String>, para: String, max: Int) {
                 line = ""
                 line_w = 0
             }
-            let rest = word
+            var rest = word
             while width(rest) > max {
                 let head = truncate(rest, max)
                 out.push(head)
@@ -130,7 +130,7 @@ fun _wrap_paragraph(out: List<String>, para: String, max: Int) {
         }
         i = i + 1
     }
-    if line_w > 0 || out.len() == 0 {
+    if line_w > 0 or out.len() == 0 {
         out.push(line)
     }
 }

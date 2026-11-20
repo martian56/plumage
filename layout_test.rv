@@ -1,5 +1,5 @@
-import std/test { assert_eq_int, assert_true, assert_false }
-import "./layout" { Rect, Constraint, split_h, split_v }
+from std.test import assert_eq_int, assert_true, assert_false
+from "./layout" import Rect, Constraint, split_h, split_v
 
 fun test_inner_shrinks_all_sides() {
     let r = Rect.new(2, 3, 10, 8).inner(1)

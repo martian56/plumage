@@ -5,24 +5,24 @@
 // pure description of one frame, and rendering ships just the cells that
 // changed since the last frame.
 //
-//     import "github.com/martian56/plumage" { App, Event, Frame, Step, next, quit, run }
-//     import "github.com/martian56/plumage/widgets/paragraph" { Paragraph }
-//     import "github.com/martian56/perch/keys" { Key }
+//     from "github.com/martian56/plumage" import App, Event, Frame, Step, next, quit, run
+//     from "github.com/martian56/plumage/widgets/paragraph" import Paragraph
+//     from "github.com/martian56/perch/keys" import Key
 //
-//     struct Model { count: Int }
+//     class Model { count: int }
 //
 //     fun init() -> Model {
-//         return Model { count: 0 }
+//         return Model(count: 0)
 //     }
 //
-//     fun update(m: Model, e: Event) -> Step<Model> {
+//     fun update(m: Model, e: Event) -> Step[Model] {
 //         match e {
 //             KeyPress(k) -> match k {
 //                 Char(c) -> {
 //                     if c == "q" {
 //                         return quit(m)
 //                     }
-//                     return next(Model { count: m.count + 1 })
+//                     return next(Model(count: m.count + 1))
 //                 },
 //                 _ -> {},
 //             },
@@ -36,17 +36,17 @@
 //     }
 //
 //     fun main() {
-//         run<Model>(App { init: init, update: update, view: view, tick_ms: 200 })
+//         run[Model](App(init: init, update: update, view: view, tick_ms: 200))
 //     }
 //
 // Widgets live under plumage/widgets; layout, style, text, and buffer are
 // importable on their own for custom widgets.
 
-import std/string
-import "github.com/martian56/perch" { Terminal, Size }
-import "github.com/martian56/perch/keys" { InputEvent, Key, MouseEvent, MouseKind }
-import "./buffer" { Buffer, Widget, diff, full_redraw }
-import "./layout" { Rect }
+import std.string
+from "github.com/martian56/perch" import Terminal, Size
+from "github.com/martian56/perch/keys" import InputEvent, Key, MouseEvent, MouseKind
+from "./buffer" import Buffer, Widget, diff, full_redraw
+from "./layout" import Rect
 
 // Everything update can react to. Tick fires when tick_ms passes without
 // input, which is what drives animation. Resize arrives with the new size
@@ -55,29 +55,29 @@ import "./layout" { Rect }
 enum Event {
     KeyPress(Key),
     Mouse(MouseEvent),
-    Paste(String),
-    Resize(Int, Int),
+    Paste(str),
+    Resize(int, int),
     Tick,
 }
 
 // What update returns: the model to carry forward, and whether to stop.
 // Build it with next or quit.
-struct Step<M> {
-    model: M,
-    quit: Bool,
+class Step[M] {
+    model: M
+    quit: bool
 }
 
-fun next<M>(m: M) -> Step<M> {
-    return Step { model: m, quit: false }
+fun next[M](m: M) -> Step[M] {
+    return Step(model: m, quit: false)
 }
 
-fun quit<M>(m: M) -> Step<M> {
-    return Step { model: m, quit: true }
+fun quit[M](m: M) -> Step[M] {
+    return Step(model: m, quit: true)
 }
 
 // The surface a view draws one frame onto.
-struct Frame {
-    buf: Buffer,
+class Frame {
+    buf: Buffer
 }
 
 impl Frame {
@@ -88,36 +88,36 @@ impl Frame {
 }
 
 // A whole application: pure functions over a model, plus the tick rate.
-struct App<M> {
-    init: fun() -> M,
-    update: fun(M, Event) -> Step<M>,
-    view: fun(M, Frame) -> Unit,
-    tick_ms: Int,
+class App[M] {
+    init: fun() -> M
+    update: fun(M, Event) -> Step[M]
+    view: fun(M, Frame) -> Unit
+    tick_ms: int
 }
 
 // Take over the terminal and run the app until update quits or stdin
 // closes. Returns false without touching anything when stdin is not a
 // terminal (for example a piped run).
-fun run<M>(app: App<M>) -> Bool {
+fun run[M](app: App[M]) -> bool {
     let term = Terminal.new()
-    if !term.setup() {
+    if not term.setup() {
         return false
     }
     term.mouse_on()
     term.paste_on()
-    let size = term.size()
-    let model = (app.init)()
-    let frame = Frame { buf: Buffer.new(size.w, size.h) }
+    var size = term.size()
+    var model = (app.init)()
+    let frame = Frame(buf: Buffer.new(size.w, size.h))
     (app.view)(model, frame)
     term.write(full_redraw(frame.buf))
     term.flush()
-    let prev = frame.buf
-    let running = true
+    var prev = frame.buf
+    var running = true
     // An event read past the end of a drag drain, delivered next iteration.
-    let held = InputEvent.Idle
-    let has_held = false
+    var held = InputEvent.Idle
+    var has_held = false
     while running {
-        let got = InputEvent.Idle
+        var got = InputEvent.Idle
         if has_held {
             got = held
             has_held = false
@@ -130,45 +130,45 @@ fun run<M>(app: App<M>) -> Bool {
         // selecting text visibly slows the app. Non-coalescable events stop
         // the drain and are handled on the next iteration via `held`.
         if _coalesces(got) {
-            let draining = true
+            var draining = true
             while draining {
                 let nxt = term.read_event(0)
                 if _coalesces(nxt) {
                     got = nxt
                 } else {
                     match nxt {
-                        Idle -> {},
-                        _ -> {
+                        case Idle {}
+                        case _ {
                             held = nxt
                             has_held = true
-                        },
+                        }
                     }
                     draining = false
                 }
             }
         }
-        let ev = Event.Tick
-        let closed = false
+        var ev = Event.Tick
+        var closed = false
         match got {
-            KeyPress(k) -> {
+            case KeyPress(k) {
                 ev = Event.KeyPress(k)
-            },
-            Mouse(m) -> {
+            }
+            case Mouse(m) {
                 ev = Event.Mouse(m)
-            },
-            Paste(s) -> {
+            }
+            case Paste(s) {
                 ev = Event.Paste(s)
-            },
-            Idle -> {
+            }
+            case Idle {
                 ev = Event.Tick
-            },
-            Closed -> {
+            }
+            case Closed {
                 closed = true
-            },
+            }
         }
-        let force_full = false
+        var force_full = false
         let ns = term.size()
-        if ns.w != size.w || ns.h != size.h {
+        if ns.w != size.w or ns.h != size.h {
             size = ns
             ev = Event.Resize(size.w, size.h)
             force_full = true
@@ -181,7 +181,7 @@ fun run<M>(app: App<M>) -> Bool {
             if step.quit {
                 running = false
             } else {
-                let nf = Frame { buf: Buffer.new(size.w, size.h) }
+                let nf = Frame(buf: Buffer.new(size.w, size.h))
                 (app.view)(model, nf)
                 if force_full {
                     term.write(full_redraw(nf.buf))
@@ -200,13 +200,15 @@ fun run<M>(app: App<M>) -> Bool {
 // Whether an input event can be replaced by a newer one of the same kind:
 // mouse drags and motion reports, where only the latest position matters.
 // Public so the policy is testable without a terminal.
-fun _coalesces(e: InputEvent) -> Bool {
+fun _coalesces(e: InputEvent) -> bool {
     return match e {
-        Mouse(m) -> match m.kind {
-            Drag -> true,
-            Move -> true,
-            _ -> false,
-        },
-        _ -> false,
+        case Mouse(m) {
+            match m.kind {
+                case Drag { true }
+                case Move { true }
+                case _ { false }
+            }
+        }
+        case _ { false }
     }
 }

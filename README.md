@@ -11,30 +11,32 @@ what the screen should look like for a given model; it figures out which
 cells changed since the last frame and repaints only those.
 
 ```rust
-import "github.com/martian56/plumage" { App, Event, Frame, Step, next, quit, run }
-import "github.com/martian56/plumage/widgets/paragraph" { Paragraph }
-import "github.com/martian56/perch/keys" { Key }
+from "github.com/martian56/plumage" import App, Event, Frame, Step, next, quit, run
+from "github.com/martian56/plumage/widgets/paragraph" import Paragraph
+from "github.com/martian56/perch/keys" import Key
 
-struct Model {
-    count: Int,
+class Model {
+    count: int
 }
 
 fun init() -> Model {
-    return Model { count: 0 }
+    return Model(count: 0)
 }
 
-fun update(m: Model, e: Event) -> Step<Model> {
+fun update(m: Model, e: Event) -> Step[Model] {
     match e {
-        KeyPress(k) -> match k {
-            Char(c) -> {
-                if c == "q" {
-                    return quit(m)
+        case KeyPress(k) {
+            match k {
+                case Char(c) {
+                    if c == "q" {
+                        return quit(m)
+                    }
+                    return next(Model(count: m.count + 1))
                 }
-                return next(Model { count: m.count + 1 })
-            },
-            _ -> {},
-        },
-        _ -> {},
+                case _ {}
+            }
+        }
+        case _ {}
     }
     return next(m)
 }
@@ -44,7 +46,7 @@ fun view(m: Model, f: Frame) {
 }
 
 fun main() {
-    run<Model>(App { init: init, update: update, view: view, tick_ms: 200 })
+    run[Model](App(init: init, update: update, view: view, tick_ms: 200))
 }
 ```
 
@@ -64,11 +66,11 @@ Building needs a C toolchain, the same one Raven already uses to link.
 Three functions around one model type:
 
 - `init() -> M` builds the starting model.
-- `update(m, event) -> Step<M>` is the only place state changes. Return
+- `update(m, event) -> Step[M]` is the only place state changes. Return
   `next(model)` to keep going or `quit(model)` to stop.
 - `view(m, frame)` describes one frame by rendering widgets into regions.
 
-`Event` covers `KeyPress(Key)`, `Mouse(MouseEvent)`, `Paste(String)`,
+`Event` covers `KeyPress(Key)`, `Mouse(MouseEvent)`, `Paste(str)`,
 `Resize(w, h)`, and `Tick`. Ticks fire whenever `tick_ms` passes without
 input, which is what makes spinners spin and gauges move while the app sits
 idle. Ctrl+C is not special: it arrives as `Ctrl("c")` and quitting is your
@@ -92,13 +94,16 @@ Split any rect into rows or columns with constraints, then render into the
 pieces:
 
 ```rust
-import "github.com/martian56/plumage/layout" { Constraint, split_v }
+from "github.com/martian56/plumage/layout" import Constraint, split_v
 
-let rows = split_v(f.area(), [
-    Constraint.Len(1),     // exactly one row
-    Constraint.Fill(1),    // everything left over
-    Constraint.Len(1),
-])
+let rows = split_v(
+    f.area(),
+    [
+        Constraint.Len(1), // exactly one row
+        Constraint.Fill(1), // everything left over
+        Constraint.Len(1),
+    ],
+)
 ```
 
 `Len` is exact, `Pct` is a share of the whole, `Fill(weight)` divides the
@@ -120,7 +125,7 @@ of a split to build grids.
 | `Spinner` | `spinner` | Braille activity indicator driven by ticks |
 
 Widgets are values built fresh from your model each frame; selection and
-scroll positions are plain `Int`s you keep in the model. `TextInput` is the
+scroll positions are plain `int`s you keep in the model. `TextInput` is the
 one stateful exception: keep it in your model and feed keys to
 `handle_key`. Every widget draws with
 `widget.render(area, f.buf)`.

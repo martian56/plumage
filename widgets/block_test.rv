@@ -1,9 +1,9 @@
-import std/string
-import std/test { assert_eq_str, assert_eq_int }
-import "./block" { Block, BorderKind }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
-import "../style" { Style }
+import std.string
+from std.test import assert_eq_str, assert_eq_int
+from "./block" import Block, BorderKind
+from "../buffer" import Buffer
+from "../layout" import Rect
+from "../style" import Style
 
 fun test_plain_border() {
     let b = Buffer.new(5, 3)

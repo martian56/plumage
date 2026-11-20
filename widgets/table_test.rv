@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_str }
-import "./table" { Table }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str
+from "./table" import Table
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_header_and_rows() {
     let b = Buffer.new(12, 3)

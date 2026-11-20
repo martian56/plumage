@@ -1,9 +1,9 @@
-import std/string
-import std/test { assert_eq_str, assert_eq_int, assert_true, assert_false }
-import "github.com/martian56/perch/keys" { Key }
-import "./input" { TextInput }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str, assert_eq_int, assert_true, assert_false
+from "github.com/martian56/perch/keys" import Key
+from "./input" import TextInput
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_insert_at_end() {
     let t = TextInput.new()

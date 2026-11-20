@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_str, assert_true }
-import "./gauge" { Gauge }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str, assert_true
+from "./gauge" import Gauge
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_half_full() {
     let b = Buffer.new(10, 1)

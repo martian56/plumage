@@ -1,10 +1,10 @@
-import std/string
-import std/test { assert_eq_int, assert_eq_str, assert_true, assert_false }
-import "./style" { Style, Color, sgr_codes, style_key }
+import std.string
+from std.test import assert_eq_int, assert_eq_str, assert_true, assert_false
+from "./style" import Style, Color, sgr_codes, style_key
 
-fun codes_text(codes: List<Int>) -> String {
-    let out = ""
-    let i = 0
+fun codes_text(codes: list[int]) -> str {
+    var out = ""
+    var i = 0
     while i < codes.len() {
         out = "${out};${codes[i]}"
         i = i + 1

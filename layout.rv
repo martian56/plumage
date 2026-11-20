@@ -3,44 +3,44 @@
 // happens at the rendering edge.
 
 // A rectangular region of the screen.
-struct Rect {
-    x: Int,
-    y: Int,
-    w: Int,
-    h: Int,
+class Rect {
+    x: int
+    y: int
+    w: int
+    h: int
 }
 
 impl Rect {
-    fun new(x: Int, y: Int, w: Int, h: Int) -> Rect {
-        return Rect { x, y, w, h }
+    fun new(x: int, y: int, w: int, h: int) -> Rect {
+        return Rect(x: x, y: y, w: w, h: h)
     }
 
-    fun right(self) -> Int {
+    fun right(self) -> int {
         return self.x + self.w
     }
 
-    fun bottom(self) -> Int {
+    fun bottom(self) -> int {
         return self.y + self.h
     }
 
     // Shrink by a margin on every side. Collapses to an empty rect rather
     // than going negative.
-    fun inner(self, margin: Int) -> Rect {
+    fun inner(self, margin: int) -> Rect {
         let w = self.w - margin * 2
         let h = self.h - margin * 2
-        if w <= 0 || h <= 0 {
-            return Rect { x: self.x, y: self.y, w: 0, h: 0 }
+        if w <= 0 or h <= 0 {
+            return Rect(x: self.x, y: self.y, w: 0, h: 0)
         }
-        return Rect { x: self.x + margin, y: self.y + margin, w, h }
+        return Rect(x: self.x + margin, y: self.y + margin, w: w, h: h)
     }
 
     // True when the cell at px, py lies inside. Handy for mouse hit tests.
-    fun contains(self, px: Int, py: Int) -> Bool {
-        return px >= self.x && px < self.x + self.w && py >= self.y && py < self.y + self.h
+    fun contains(self, px: int, py: int) -> bool {
+        return px >= self.x and px < self.x + self.w and py >= self.y and py < self.y + self.h
     }
 
-    fun is_empty(self) -> Bool {
-        return self.w <= 0 || self.h <= 0
+    fun is_empty(self) -> bool {
+        return self.w <= 0 or self.h <= 0
     }
 }
 
@@ -50,20 +50,20 @@ impl Rect {
 // takes a weighted share of whatever is left after the fixed pieces. Min is
 // a floor: at least that much, plus a single share of the leftovers.
 enum Constraint {
-    Len(Int),
-    Pct(Int),
-    Min(Int),
-    Fill(Int),
+    Len(int),
+    Pct(int),
+    Min(int),
+    Fill(int),
 }
 
 // Split a rect into vertical stripes, left to right.
-fun split_h(area: Rect, cons: List<Constraint>) -> List<Rect> {
+fun split_h(area: Rect, cons: list[Constraint]) -> list[Rect] {
     let sizes = _sizes(area.w, cons)
-    let out: List<Rect> = []
-    let x = area.x
-    let i = 0
+    let out: list[Rect] = []
+    var x = area.x
+    var i = 0
     while i < sizes.len() {
-        out.push(Rect { x, y: area.y, w: sizes[i], h: area.h })
+        out.push(Rect(x: x, y: area.y, w: sizes[i], h: area.h))
         x = x + sizes[i]
         i = i + 1
     }
@@ -71,13 +71,13 @@ fun split_h(area: Rect, cons: List<Constraint>) -> List<Rect> {
 }
 
 // Split a rect into horizontal stripes, top to bottom.
-fun split_v(area: Rect, cons: List<Constraint>) -> List<Rect> {
+fun split_v(area: Rect, cons: list[Constraint]) -> list[Rect] {
     let sizes = _sizes(area.h, cons)
-    let out: List<Rect> = []
-    let y = area.y
-    let i = 0
+    let out: list[Rect] = []
+    var y = area.y
+    var i = 0
     while i < sizes.len() {
-        out.push(Rect { x: area.x, y, w: area.w, h: sizes[i] })
+        out.push(Rect(x: area.x, y: y, w: area.w, h: sizes[i]))
         y = y + sizes[i]
         i = i + 1
     }
@@ -87,43 +87,43 @@ fun split_v(area: Rect, cons: List<Constraint>) -> List<Rect> {
 // Resolve constraints against a total, in three passes: fixed sizes first,
 // then leftover distribution to the flexible pieces, then a front-to-back
 // clamp so an over-budget list degrades by cutting from the end.
-fun _sizes(total: Int, cons: List<Constraint>) -> List<Int> {
-    let sizes: List<Int> = []
-    let weights: List<Int> = []
-    let fixed = 0
-    let flex_weight = 0
-    let i = 0
+fun _sizes(total: int, cons: list[Constraint]) -> list[int] {
+    let sizes: list[int] = []
+    let weights: list[int] = []
+    var fixed = 0
+    var flex_weight = 0
+    var i = 0
     while i < cons.len() {
         match cons[i] {
-            Len(n) -> {
+            case Len(n) {
                 sizes.push(n)
                 weights.push(0)
                 fixed = fixed + n
-            },
-            Pct(p) -> {
+            }
+            case Pct(p) {
                 let n = total * p / 100
                 sizes.push(n)
                 weights.push(0)
                 fixed = fixed + n
-            },
-            Min(n) -> {
+            }
+            case Min(n) {
                 sizes.push(n)
                 weights.push(1)
                 fixed = fixed + n
                 flex_weight = flex_weight + 1
-            },
-            Fill(w) -> {
+            }
+            case Fill(w) {
                 sizes.push(0)
                 weights.push(w)
                 flex_weight = flex_weight + w
-            },
+            }
         }
         i = i + 1
     }
     let leftover = total - fixed
-    if leftover > 0 && flex_weight > 0 {
-        let given = 0
-        let last_flex = -1
+    if leftover > 0 and flex_weight > 0 {
+        var given = 0
+        var last_flex = -1
         i = 0
         while i < sizes.len() {
             if weights[i] > 0 {
@@ -140,7 +140,7 @@ fun _sizes(total: Int, cons: List<Constraint>) -> List<Int> {
         }
     }
     // Clamp to the available space, cutting from the end.
-    let used = 0
+    var used = 0
     i = 0
     while i < sizes.len() {
         if used + sizes[i] > total {

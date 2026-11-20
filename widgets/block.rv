@@ -1,11 +1,11 @@
 // A bordered box with an optional title. Other widgets draw inside its
 // inner rect; compose them by rendering the block first.
 
-import std/string
-import "github.com/martian56/wingspan" { truncate, width }
-import "../buffer" { Buffer, Widget }
-import "../layout" { Rect }
-import "../style" { Style }
+import std.string
+from "github.com/martian56/wingspan" import truncate, width
+from "../buffer" import Buffer, Widget
+from "../layout" import Rect
+from "../style" import Style
 
 enum BorderKind {
     None,
@@ -15,85 +15,85 @@ enum BorderKind {
     Thick,
 }
 
-struct Block {
-    title: String,
-    kind: BorderKind,
-    style: Style,
-    title_style: Style,
+class Block {
+    title: str
+    kind: BorderKind
+    style: Style
+    title_style: Style
 }
 
-struct _Chars {
-    tl: String,
-    tr: String,
-    bl: String,
-    br: String,
-    h: String,
-    v: String,
+class _Chars {
+    tl: str
+    tr: str
+    bl: str
+    br: str
+    h: str
+    v: str
 }
 
 impl Block {
     fun new() -> Block {
-        return Block {
+        return Block(
             title: "",
             kind: BorderKind.Plain,
             style: Style.new(),
             title_style: Style.new(),
-        }
+        )
     }
 
-    fun title(self, t: String) -> Block {
-        return Block { title: t, kind: self.kind, style: self.style, title_style: self.title_style }
+    fun title(self, t: str) -> Block {
+        return Block(title: t, kind: self.kind, style: self.style, title_style: self.title_style)
     }
 
     fun rounded(self) -> Block {
-        return Block {
+        return Block(
             title: self.title,
             kind: BorderKind.Rounded,
             style: self.style,
             title_style: self.title_style,
-        }
+        )
     }
 
     fun double(self) -> Block {
-        return Block {
+        return Block(
             title: self.title,
             kind: BorderKind.Double,
             style: self.style,
             title_style: self.title_style,
-        }
+        )
     }
 
     fun thick(self) -> Block {
-        return Block {
+        return Block(
             title: self.title,
             kind: BorderKind.Thick,
             style: self.style,
             title_style: self.title_style,
-        }
+        )
     }
 
     fun no_borders(self) -> Block {
-        return Block {
+        return Block(
             title: self.title,
             kind: BorderKind.None,
             style: self.style,
             title_style: self.title_style,
-        }
+        )
     }
 
     fun style(self, s: Style) -> Block {
-        return Block { title: self.title, kind: self.kind, style: s, title_style: self.title_style }
+        return Block(title: self.title, kind: self.kind, style: s, title_style: self.title_style)
     }
 
     fun title_style(self, s: Style) -> Block {
-        return Block { title: self.title, kind: self.kind, style: self.style, title_style: s }
+        return Block(title: self.title, kind: self.kind, style: self.style, title_style: s)
     }
 
     // Where content goes: the area minus the border, if there is one.
     fun inner(self, area: Rect) -> Rect {
         return match self.kind {
-            None -> area,
-            _ -> area.inner(1),
+            case None { area }
+            case _ { area.inner(1) }
         }
     }
 }
@@ -104,13 +104,13 @@ impl Widget for Block {
             return
         }
         match self.kind {
-            None -> {
+            case None {
                 self._draw_title(area, buf)
                 return
-            },
-            _ -> {},
+            }
+            case _ {}
         }
-        if area.w < 2 || area.h < 2 {
+        if area.w < 2 or area.h < 2 {
             return
         }
         let c = _chars(self.kind)
@@ -120,13 +120,13 @@ impl Widget for Block {
         buf.set(right, area.y, c.tr, self.style)
         buf.set(area.x, bottom, c.bl, self.style)
         buf.set(right, bottom, c.br, self.style)
-        let x = area.x + 1
+        var x = area.x + 1
         while x < right {
             buf.set(x, area.y, c.h, self.style)
             buf.set(x, bottom, c.h, self.style)
             x = x + 1
         }
-        let y = area.y + 1
+        var y = area.y + 1
         while y < bottom {
             buf.set(area.x, y, c.v, self.style)
             buf.set(right, y, c.v, self.style)
@@ -138,16 +138,16 @@ impl Widget for Block {
 
 fun _chars(kind: BorderKind) -> _Chars {
     return match kind {
-        Rounded -> _Chars { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
-        Double -> _Chars { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
-        Thick -> _Chars { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃" },
-        _ -> _Chars { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" },
+        case Rounded { _Chars(tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│") }
+        case Double { _Chars(tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║") }
+        case Thick { _Chars(tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃") }
+        case _ { _Chars(tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│") }
     }
 }
 
 impl Block {
     fun _draw_title(self, area: Rect, buf: Buffer) {
-        if self.title == "" || area.w < 5 {
+        if self.title == "" or area.w < 5 {
             return
         }
         let t = truncate(self.title, area.w - 4)

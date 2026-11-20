@@ -1,75 +1,75 @@
 // A selectable list that scrolls to keep the selection visible. Selection
 // lives in your model as a plain index; build the widget fresh each frame.
 
-import std/string
-import "github.com/martian56/wingspan" { truncate, width, pad_right }
-import "../buffer" { Buffer, Widget }
-import "../layout" { Rect }
-import "../style" { Style }
+import std.string
+from "github.com/martian56/wingspan" import truncate, width, pad_right
+from "../buffer" import Buffer, Widget
+from "../layout" import Rect
+from "../style" import Style
 
-struct ListView {
-    items: List<String>,
-    selected: Int,
-    style: Style,
-    highlight_style: Style,
-    marker: String,
+class ListView {
+    items: list[str]
+    selected: int
+    style: Style
+    highlight_style: Style
+    marker: str
 }
 
 impl ListView {
     // A list with nothing selected. Pass -1 to selected for the same.
-    fun new(items: List<String>) -> ListView {
-        return ListView {
-            items,
+    fun new(items: list[str]) -> ListView {
+        return ListView(
+            items: items,
             selected: -1,
             style: Style.new(),
             highlight_style: Style.new().reverse(),
             marker: "> ",
-        }
+        )
     }
 
-    fun selected(self, i: Int) -> ListView {
-        return ListView {
+    fun selected(self, i: int) -> ListView {
+        return ListView(
             items: self.items,
             selected: i,
             style: self.style,
             highlight_style: self.highlight_style,
             marker: self.marker,
-        }
+        )
     }
 
     fun style(self, s: Style) -> ListView {
-        return ListView {
+        return ListView(
             items: self.items,
             selected: self.selected,
             style: s,
             highlight_style: self.highlight_style,
             marker: self.marker,
-        }
+        )
     }
 
     fun highlight_style(self, s: Style) -> ListView {
-        return ListView {
+        return ListView(
             items: self.items,
             selected: self.selected,
             style: self.style,
             highlight_style: s,
             marker: self.marker,
-        }
+        )
     }
 
-    fun marker(self, m: String) -> ListView {
-        return ListView {
+    fun marker(self, m: str) -> ListView {
+        return ListView(
             items: self.items,
             selected: self.selected,
             style: self.style,
             highlight_style: self.highlight_style,
             marker: m,
-        }
+        )
     }
 
     // First visible row, chosen so the selection stays on screen.
-    fun _offset(self, h: Int) -> Int {
-        if self.selected < 0 || h <= 0 {
+    fun _offset(self, h: int) -> int {
+        if self.selected < 0 or h <= 0 {
             return 0
         }
         if self.selected < h {
@@ -86,12 +86,12 @@ impl Widget for ListView {
         }
         let pad = " ".repeat(width(self.marker))
         let offset = self._offset(area.h)
-        let row = 0
-        while row < area.h && offset + row < self.items.len() {
+        var row = 0
+        while row < area.h and offset + row < self.items.len() {
             let i = offset + row
             let picked = i == self.selected
-            let lead = pad
-            let sty = self.style
+            var lead = pad
+            var sty = self.style
             if picked {
                 lead = self.marker
                 sty = self.highlight_style
