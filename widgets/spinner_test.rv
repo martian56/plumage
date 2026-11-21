@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_str }
-import "./spinner" { Spinner }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str
+from "./spinner" import Spinner
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_frame_advances_with_ticks() {
     let a = Buffer.new(1, 1)

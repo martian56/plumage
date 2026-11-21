@@ -1,17 +1,17 @@
 // Demo launcher. Run with: rvpm run -- [dashboard|todo]
-import std/env { args }
-import std/io { println }
-import std/string
-import "../examples/dashboard" { dashboard_main }
-import "../examples/todo" { todo_main }
+from std.env import args
+from std.io import println
+import std.string
+from "../examples/dashboard" import dashboard_main
+from "../examples/todo" import todo_main
 
 fun main() {
     let a = args()
-    let pick = "dashboard"
+    var pick = "dashboard"
     if a.len() > 1 {
         pick = a[1]
     }
-    let ok = true
+    var ok = true
     if pick == "todo" {
         ok = todo_main()
     } else {
@@ -22,7 +22,7 @@ fun main() {
             return
         }
     }
-    if !ok {
+    if not ok {
         println("plumage needs an interactive terminal; run this from a real console")
     }
 }

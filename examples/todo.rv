@@ -2,52 +2,46 @@
 // or j and k move, space toggles done, d deletes, Tab switches focus
 // between the input and the list, q quits while the list has focus.
 
-import std/string
-import "github.com/martian56/perch/keys" { Key, MouseEvent, MouseKind }
-import "../lib" { App, Event, Frame, Step, next, quit, run }
-import "../layout" { Rect, Constraint, split_v }
-import "../style" { Style, Color }
-import "../widgets/block" { Block }
-import "../widgets/input" { TextInput }
-import "../widgets/list" { ListView }
-import "../widgets/paragraph" { Paragraph }
+import std.string
+from "github.com/martian56/perch/keys" import Key, MouseEvent, MouseKind
+from "../lib" import App, Event, Frame, Step, next, quit, run
+from "../layout" import Rect, Constraint, split_v
+from "../style" import Style, Color
+from "../widgets/block" import Block
+from "../widgets/input" import TextInput
+from "../widgets/list" import ListView
+from "../widgets/paragraph" import Paragraph
 
-struct Todo {
-    items: List<String>,
-    done: List<Bool>,
-    selected: Int,
-    entry: TextInput,
-    typing: Bool,
+class Todo {
+    items: list[str]
+    done: list[bool]
+    selected: int
+    entry: TextInput
+    typing: bool
 }
 
 fun todo_init() -> Todo {
     let items = ["read the plumage README", "build something"]
     let done = [true, false]
-    return Todo {
-        items,
-        done,
-        selected: 0,
-        entry: TextInput.new(),
-        typing: true,
-    }
+    return Todo(items: items, done: done, selected: 0, entry: TextInput.new(), typing: true)
 }
 
-fun todo_update(m: Todo, e: Event) -> Step<Todo> {
+fun todo_update(m: Todo, e: Event) -> Step[Todo] {
     match e {
-        KeyPress(k) -> {
+        case KeyPress(k) {
             if m.typing {
                 return _typing_key(m, k)
             }
             return _list_key(m, k)
-        },
-        _ -> {},
+        }
+        case _ {}
     }
     return next(m)
 }
 
-fun _typing_key(m: Todo, k: Key) -> Step<Todo> {
+fun _typing_key(m: Todo, k: Key) -> Step[Todo] {
     match k {
-        Enter -> {
+        case Enter {
             let text = m.entry.value.trim()
             if text != "" {
                 m.items.push(text)
@@ -55,31 +49,31 @@ fun _typing_key(m: Todo, k: Key) -> Step<Todo> {
                 m.entry = TextInput.new()
             }
             return next(m)
-        },
-        Tab -> {
+        }
+        case Tab {
             m.typing = false
             m.entry.focus(false)
             return next(m)
-        },
-        Esc -> {
+        }
+        case Esc {
             m.typing = false
             m.entry.focus(false)
             return next(m)
-        },
-        Ctrl(c) -> {
+        }
+        case Ctrl(c) {
             if c == "c" {
                 return quit(m)
             }
-        },
-        _ -> {},
+        }
+        case _ {}
     }
     m.entry.handle_key(k)
     return next(m)
 }
 
-fun _list_key(m: Todo, k: Key) -> Step<Todo> {
+fun _list_key(m: Todo, k: Key) -> Step[Todo] {
     match k {
-        Char(c) -> {
+        case Char(c) {
             if c == "q" {
                 return quit(m)
             }
@@ -95,36 +89,36 @@ fun _list_key(m: Todo, k: Key) -> Step<Todo> {
             if c == "d" {
                 return next(_remove(m))
             }
-        },
-        Down -> {
+        }
+        case Down {
             return next(_move(m, 1))
-        },
-        Up -> {
+        }
+        case Up {
             return next(_move(m, -1))
-        },
-        Enter -> {
+        }
+        case Enter {
             return next(_toggle(m))
-        },
-        Delete -> {
+        }
+        case Delete {
             return next(_remove(m))
-        },
-        Tab -> {
+        }
+        case Tab {
             m.typing = true
             m.entry.focus(true)
             return next(m)
-        },
-        Ctrl(c) -> {
+        }
+        case Ctrl(c) {
             if c == "c" {
                 return quit(m)
             }
-        },
-        _ -> {},
+        }
+        case _ {}
     }
     return next(m)
 }
 
-fun _move(m: Todo, d: Int) -> Todo {
-    let s = m.selected + d
+fun _move(m: Todo, d: int) -> Todo {
+    var s = m.selected + d
     if s < 0 {
         s = 0
     }
@@ -136,19 +130,19 @@ fun _move(m: Todo, d: Int) -> Todo {
 }
 
 fun _toggle(m: Todo) -> Todo {
-    if m.selected >= 0 && m.selected < m.done.len() {
-        m.done[m.selected] = !m.done[m.selected]
+    if m.selected >= 0 and m.selected < m.done.len() {
+        m.done[m.selected] = not m.done[m.selected]
     }
     return m
 }
 
 fun _remove(m: Todo) -> Todo {
-    if m.selected < 0 || m.selected >= m.items.len() {
+    if m.selected < 0 or m.selected >= m.items.len() {
         return m
     }
-    let items: List<String> = []
-    let done: List<Bool> = []
-    let i = 0
+    let items: list[str] = []
+    let done: list[bool] = []
+    var i = 0
     while i < m.items.len() {
         if i != m.selected {
             items.push(m.items[i])
@@ -166,8 +160,8 @@ fun _remove(m: Todo) -> Todo {
 
 fun todo_view(m: Todo, f: Frame) {
     let rows = split_v(f.area(), [Constraint.Len(3), Constraint.Fill(1), Constraint.Len(1)])
-    let entry_title = "New item (Enter adds, Tab to list)"
-    if !m.typing {
+    var entry_title = "New item (Enter adds, Tab to list)"
+    if not m.typing {
         entry_title = "New item (Tab to focus)"
     }
     let entry_box = Block.new().title(entry_title).rounded()
@@ -176,18 +170,18 @@ fun todo_view(m: Todo, f: Frame) {
 
     let list_box = Block.new().title("Items").rounded()
     list_box.render(rows[1], f.buf)
-    let lines: List<String> = []
-    let i = 0
+    let lines: list[str] = []
+    var i = 0
     while i < m.items.len() {
-        let mark = "[ ] "
+        var mark = "[ ] "
         if m.done[i] {
             mark = "[x] "
         }
         lines.push("${mark}${m.items[i]}")
         i = i + 1
     }
-    let sel = -1
-    if !m.typing {
+    var sel = -1
+    if not m.typing {
         sel = m.selected
     }
     ListView.new(lines).selected(sel).highlight_style(Style.new().fg(Color.Cyan).reverse()).render(
@@ -202,7 +196,7 @@ fun todo_view(m: Todo, f: Frame) {
 }
 
 // Entry point used by src/main.rv.
-fun todo_main() -> Bool {
-    let app = App { init: todo_init, update: todo_update, view: todo_view, tick_ms: 250 }
-    return run<Todo>(app)
+fun todo_main() -> bool {
+    let app = App(init: todo_init, update: todo_update, view: todo_view, tick_ms: 250)
+    return run[Todo](app)
 }

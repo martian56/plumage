@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_int, assert_eq_str, assert_true, assert_false }
-import "./buffer" { Buffer, Cell, diff, full_redraw }
-import "./style" { Style, Color }
-import "./layout" { Rect }
+import std.string
+from std.test import assert_eq_int, assert_eq_str, assert_true, assert_false
+from "./buffer" import Buffer, Cell, diff, full_redraw
+from "./style" import Style, Color
+from "./layout" import Rect
 
 fun test_new_buffer_is_blank() {
     let b = Buffer.new(4, 2)

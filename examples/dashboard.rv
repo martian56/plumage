@@ -1,61 +1,61 @@
 // A dashboard with tabs, animated gauges, a process table, and a spinner.
 // Keys: 1 and 2 or the arrows switch tabs, q quits.
 
-import std/string
-import "github.com/martian56/perch/keys" { Key, MouseEvent, MouseKind }
-import "../lib" { App, Event, Frame, Step, next, quit, run }
-import "../layout" { Rect, Constraint, split_v, split_h }
-import "../style" { Style, Color }
-import "../text" { Align }
-import "../widgets/block" { Block }
-import "../widgets/gauge" { Gauge }
-import "../widgets/paragraph" { Paragraph }
-import "../widgets/spinner" { Spinner }
-import "../widgets/table" { Table }
-import "../widgets/tabs" { Tabs }
+import std.string
+from "github.com/martian56/perch/keys" import Key, MouseEvent, MouseKind
+from "../lib" import App, Event, Frame, Step, next, quit, run
+from "../layout" import Rect, Constraint, split_v, split_h
+from "../style" import Style, Color
+from "../text" import Align
+from "../widgets/block" import Block
+from "../widgets/gauge" import Gauge
+from "../widgets/paragraph" import Paragraph
+from "../widgets/spinner" import Spinner
+from "../widgets/table" import Table
+from "../widgets/tabs" import Tabs
 
-struct Dash {
-    tick: Int,
-    tab: Int,
+class Dash {
+    tick: int
+    tab: int
 }
 
 fun dash_init() -> Dash {
-    return Dash { tick: 0, tab: 0 }
+    return Dash(tick: 0, tab: 0)
 }
 
-fun dash_update(m: Dash, e: Event) -> Step<Dash> {
+fun dash_update(m: Dash, e: Event) -> Step[Dash] {
     match e {
-        KeyPress(k) -> {
+        case KeyPress(k) {
             match k {
-                Char(c) -> {
+                case Char(c) {
                     if c == "q" {
                         return quit(m)
                     }
                     if c == "1" {
-                        return next(Dash { tick: m.tick, tab: 0 })
+                        return next(Dash(tick: m.tick, tab: 0))
                     }
                     if c == "2" {
-                        return next(Dash { tick: m.tick, tab: 1 })
+                        return next(Dash(tick: m.tick, tab: 1))
                     }
-                },
-                Left -> {
-                    return next(Dash { tick: m.tick, tab: 0 })
-                },
-                Right -> {
-                    return next(Dash { tick: m.tick, tab: 1 })
-                },
-                Ctrl(c) -> {
+                }
+                case Left {
+                    return next(Dash(tick: m.tick, tab: 0))
+                }
+                case Right {
+                    return next(Dash(tick: m.tick, tab: 1))
+                }
+                case Ctrl(c) {
                     if c == "c" {
                         return quit(m)
                     }
-                },
-                _ -> {},
+                }
+                case _ {}
             }
-        },
-        Tick -> {
-            return next(Dash { tick: m.tick + 1, tab: m.tab })
-        },
-        _ -> {},
+        }
+        case Tick {
+            return next(Dash(tick: m.tick + 1, tab: m.tab))
+        }
+        case _ {}
     }
     return next(m)
 }
@@ -112,7 +112,7 @@ fun _about(area: Rect, f: Frame) {
 }
 
 // Entry point used by src/main.rv.
-fun dashboard_main() -> Bool {
-    let app = App { init: dash_init, update: dash_update, view: dash_view, tick_ms: 120 }
-    return run<Dash>(app)
+fun dashboard_main() -> bool {
+    let app = App(init: dash_init, update: dash_update, view: dash_view, tick_ms: 120)
+    return run[Dash](app)
 }

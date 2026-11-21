@@ -1,12 +1,12 @@
-import std/string
-import std/test { assert_eq_str }
-import "./scrollbar" { Scrollbar }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str
+from "./scrollbar" import Scrollbar
+from "../buffer" import Buffer
+from "../layout" import Rect
 
-fun col_text(b: Buffer, x: Int, h: Int) -> String {
-    let out = ""
-    let y = 0
+fun col_text(b: Buffer, x: int, h: int) -> str {
+    var out = ""
+    var y = 0
     while y < h {
         out = out.concat(b.get(x, y).ch)
         y = y + 1

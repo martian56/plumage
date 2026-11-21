@@ -15,24 +15,24 @@ enum Color {
     Cyan,
     White,
     Gray,
-    Indexed(Int),
-    Rgb(Int, Int, Int),
+    Indexed(int),
+    Rgb(int, int, int),
 }
 
-struct Style {
-    fg: Color,
-    bg: Color,
-    bold: Bool,
-    dim: Bool,
-    italic: Bool,
-    underline: Bool,
-    reverse: Bool,
-    strike: Bool,
+class Style {
+    fg: Color
+    bg: Color
+    bold: bool
+    dim: bool
+    italic: bool
+    underline: bool
+    reverse: bool
+    strike: bool
 }
 
 impl Style {
     fun new() -> Style {
-        return Style {
+        return Style(
             fg: Color.Default,
             bg: Color.Default,
             bold: false,
@@ -41,7 +41,7 @@ impl Style {
             underline: false,
             reverse: false,
             strike: false,
-        }
+        )
     }
 
     // Each builder returns a fresh Style, so a base can branch safely.
@@ -94,7 +94,7 @@ impl Style {
     }
 
     fun _copy(self) -> Style {
-        return Style {
+        return Style(
             fg: self.fg,
             bg: self.bg,
             bold: self.bold,
@@ -103,14 +103,14 @@ impl Style {
             underline: self.underline,
             reverse: self.reverse,
             strike: self.strike,
-        }
+        )
     }
 }
 
 // The SGR parameter list for a style, always starting from a reset so a
 // cell's appearance never depends on what was drawn before it.
-fun sgr_codes(s: Style) -> List<Int> {
-    let out: List<Int> = []
+fun sgr_codes(s: Style) -> list[int] {
+    let out: list[int] = []
     out.push(0)
     if s.bold {
         out.push(1)
@@ -136,10 +136,10 @@ fun sgr_codes(s: Style) -> List<Int> {
 }
 
 // A comparable fingerprint, used by the renderer to detect style changes.
-fun style_key(s: Style) -> String {
+fun style_key(s: Style) -> str {
     let codes = sgr_codes(s)
-    let key = ""
-    let i = 0
+    var key = ""
+    var i = 0
     while i < codes.len() {
         key = "${key};${codes[i]}"
         i = i + 1
@@ -149,47 +149,29 @@ fun style_key(s: Style) -> String {
 
 // Append the codes for one color. base is 30 for foreground and 40 for
 // background; ext is the 38 or 48 extended-color introducer.
-fun _push_color(out: List<Int>, c: Color, base: Int, ext: Int) {
+fun _push_color(out: list[int], c: Color, base: int, ext: int) {
     match c {
-        Default -> {},
-        Black -> {
-            out.push(base)
-        },
-        Red -> {
-            out.push(base + 1)
-        },
-        Green -> {
-            out.push(base + 2)
-        },
-        Yellow -> {
-            out.push(base + 3)
-        },
-        Blue -> {
-            out.push(base + 4)
-        },
-        Magenta -> {
-            out.push(base + 5)
-        },
-        Cyan -> {
-            out.push(base + 6)
-        },
-        White -> {
-            out.push(base + 7)
-        },
-        Gray -> {
-            out.push(base + 60)
-        },
-        Indexed(n) -> {
+        case Default {}
+        case Black { out.push(base) }
+        case Red { out.push(base + 1) }
+        case Green { out.push(base + 2) }
+        case Yellow { out.push(base + 3) }
+        case Blue { out.push(base + 4) }
+        case Magenta { out.push(base + 5) }
+        case Cyan { out.push(base + 6) }
+        case White { out.push(base + 7) }
+        case Gray { out.push(base + 60) }
+        case Indexed(n) {
             out.push(ext)
             out.push(5)
             out.push(n)
-        },
-        Rgb(r, g, b) -> {
+        }
+        case Rgb(r, g, b) {
             out.push(ext)
             out.push(2)
             out.push(r)
             out.push(g)
             out.push(b)
-        },
+        }
     }
 }

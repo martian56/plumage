@@ -1,8 +1,8 @@
-import std/string
-import std/test { assert_eq_str }
-import "./list" { ListView }
-import "../buffer" { Buffer }
-import "../layout" { Rect }
+import std.string
+from std.test import assert_eq_str
+from "./list" import ListView
+from "../buffer" import Buffer
+from "../layout" import Rect
 
 fun test_items_render_with_indent() {
     let b = Buffer.new(8, 2)
