@@ -53,8 +53,8 @@ fun main() {
 ## Install
 
 ```
-rvpm add github.com/martian56/plumage@v0.4.0
-rvpm add github.com/martian56/perch@v0.3.0
+rvpm add github.com/martian56/plumage@v0.5.0
+rvpm add github.com/martian56/perch@v0.4.0
 ```
 
 perch is plumage's terminal layer; your code imports its `Key` and mouse
