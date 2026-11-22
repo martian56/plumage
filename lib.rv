@@ -176,9 +176,41 @@ fun run[M](app: App[M]) -> bool {
         if closed {
             running = false
         } else {
-            let step = (app.update)(model, ev)
+            var step = (app.update)(model, ev)
             model = step.model
-            if step.quit {
+            // Apply every event that is already waiting before drawing, so a
+            // held key or a fast wheel costs one frame, not one per event.
+            var drained = 0
+            while not step.quit and drained < 200 and not has_held {
+                let more = term.read_event(0)
+                var next_ev = Event.Tick
+                var got_one = true
+                match more {
+                    case KeyPress(k) {
+                        next_ev = Event.KeyPress(k)
+                    }
+                    case Mouse(m) {
+                        next_ev = Event.Mouse(m)
+                    }
+                    case Paste(s2) {
+                        next_ev = Event.Paste(s2)
+                    }
+                    case Closed {
+                        got_one = false
+                        running = false
+                    }
+                    case Idle {
+                        got_one = false
+                    }
+                }
+                if not got_one {
+                    break
+                }
+                step = (app.update)(model, next_ev)
+                model = step.model
+                drained += 1
+            }
+            if step.quit or not running {
                 running = false
             } else {
                 let nf = Frame(buf: Buffer.new(size.w, size.h))

@@ -53,7 +53,7 @@ fun main() {
 ## Install
 
 ```
-rvpm add github.com/martian56/plumage@v0.5.1
+rvpm add github.com/martian56/plumage@v0.5.2
 rvpm add github.com/martian56/perch@v0.4.0
 ```
 
