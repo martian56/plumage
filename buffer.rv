@@ -5,7 +5,7 @@
 import std.string
 from "github.com/martian56/wingspan" import decode, char_width
 import "github.com/martian56/perch/ansi" as ansi
-from "./style" import Style, Color, sgr_codes, style_key
+from "./style" import Style, Color, sgr_codes, same_style
 from "./layout" import Rect
 
 // Anything that can draw itself into a region of a buffer.
@@ -124,8 +124,11 @@ fun diff(old: Buffer, new: Buffer) -> str {
     if old.w != new.w or old.h != new.h {
         return full_redraw(new)
     }
-    var out = ""
-    var last_key = "(none)"
+    // Pieces are joined once at the end: growing one string per cell copies
+    // the whole frame again for every cell that changed.
+    let out: list[str] = []
+    var have_style = false
+    var last = Style.new()
     var cur_x = -1
     var cur_y = -1
     var y = 0
@@ -135,52 +138,62 @@ fun diff(old: Buffer, new: Buffer) -> str {
             let nc = new.get(x, y)
             if nc.ch != "" and not _same_cell(old.get(x, y), nc) {
                 if cur_x != x or cur_y != y {
-                    out = out.concat(ansi.move_to(y + 1, x + 1))
+                    out.push(ansi.move_to(y + 1, x + 1))
                 }
-                let key = style_key(nc.style)
-                if key != last_key {
-                    out = out.concat(ansi.sgr(sgr_codes(nc.style)))
-                    last_key = key
+                if not have_style or not same_style(last, nc.style) {
+                    out.push(ansi.sgr(sgr_codes(nc.style)))
+                    last = nc.style
+                    have_style = true
                 }
-                out = out.concat(nc.ch)
-                cur_x = x + char_width(decode(nc.ch, 0).cp)
+                out.push(nc.ch)
+                cur_x = x + (1 if nc.ch.length() == 1 else char_width(decode(nc.ch, 0).cp))
                 cur_y = y
             }
             x = x + 1
         }
         y = y + 1
     }
-    return out
+    return _join(out, 0, out.len())
 }
 
 // Repaint everything, used on the first frame and after a resize.
 fun full_redraw(new: Buffer) -> str {
-    var out = ansi.clear_screen()
-    var last_key = "(none)"
+    let out: list[str] = [ansi.clear_screen()]
+    var have_style = false
+    var last = Style.new()
     var y = 0
     while y < new.h {
-        out = out.concat(ansi.move_to(y + 1, 1))
+        out.push(ansi.move_to(y + 1, 1))
         var x = 0
         while x < new.w {
             let nc = new.get(x, y)
             if nc.ch != "" {
-                let key = style_key(nc.style)
-                if key != last_key {
-                    out = out.concat(ansi.sgr(sgr_codes(nc.style)))
-                    last_key = key
+                if not have_style or not same_style(last, nc.style) {
+                    out.push(ansi.sgr(sgr_codes(nc.style)))
+                    last = nc.style
+                    have_style = true
                 }
-                out = out.concat(nc.ch)
+                out.push(nc.ch)
             }
             x = x + 1
         }
         y = y + 1
     }
-    return out
+    return _join(out, 0, out.len())
+}
+
+// Halves joined then glued: each byte is copied about log2(n) times.
+fun _join(parts: list[str], a: int, b: int) -> str {
+    if b - a <= 0 {
+        return ""
+    }
+    if b - a == 1 {
+        return parts[a]
+    }
+    let mid = a + (b - a) / 2
+    return _join(parts, a, mid).concat(_join(parts, mid, b))
 }
 
 fun _same_cell(a: Cell, b: Cell) -> bool {
-    if a.ch != b.ch {
-        return false
-    }
-    return style_key(a.style) == style_key(b.style)
+    return a.ch == b.ch and same_style(a.style, b.style)
 }
