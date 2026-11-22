@@ -82,10 +82,10 @@ a single event instead of a keystroke stream where a pasted newline would
 act as Enter. Insert it into a `TextInput` with `input.insert(text)`:
 
 ```rust
-Paste(text) -> {
+case Paste(text) {
     m.entry.insert(text)
     return next(m)
-},
+}
 ```
 
 ## Layout
