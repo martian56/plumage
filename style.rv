@@ -135,6 +135,34 @@ fun sgr_codes(s: Style) -> list[int] {
     return out
 }
 
+// Whether two styles draw the same, without building any strings: the
+// renderer asks this for every cell of every frame.
+fun same_style(a: Style, b: Style) -> bool {
+    if color_code(a.fg) != color_code(b.fg) or color_code(a.bg) != color_code(b.bg) {
+        return false
+    }
+    return a.bold == b.bold and a.dim == b.dim and a.italic == b.italic and a.underline == b.underline and a.reverse == b.reverse and a.strike == b.strike
+}
+
+// A color as one int: -1 default, 0 to 9 named, 100 + n indexed, and
+// 1000000 + 0xRRGGBB for RGB.
+fun color_code(c: Color) -> int {
+    return match c {
+        case Default { -1 }
+        case Black { 0 }
+        case Red { 1 }
+        case Green { 2 }
+        case Yellow { 3 }
+        case Blue { 4 }
+        case Magenta { 5 }
+        case Cyan { 6 }
+        case White { 7 }
+        case Gray { 8 }
+        case Indexed(n) { 100 + n }
+        case Rgb(r, g, b) { 1000000 + r * 65536 + g * 256 + b }
+    }
+}
+
 // A comparable fingerprint, used by the renderer to detect style changes.
 fun style_key(s: Style) -> str {
     let codes = sgr_codes(s)

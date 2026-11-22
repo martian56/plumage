@@ -1,6 +1,6 @@
 [package]
 name = "plumage"
-version = "0.5.0"
+version = "0.5.1"
 edition = "v3"
 
 [dependencies]
